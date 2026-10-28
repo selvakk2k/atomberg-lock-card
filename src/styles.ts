@@ -22,10 +22,24 @@ export const cardStyles = css`
     --card-unlocked: #4caf50;
   }
 
+  /* ──────────────────────────────────────────────────────────
+     Material You Token Layer (Activated via Config)
+     ────────────────────────────────────────────────────────── */
+  :host([theme="material_you"]) {
+    --card-accent: var(--md-sys-color-primary, var(--atomberg-accent, #f5a623));
+    --card-bg: var(--md-sys-color-surface-variant, var(--md-sys-color-surface, var(--ha-card-background, var(--card-background-color, #1e1e24))));
+    --card-surface: var(--md-sys-color-surface, color-mix(in srgb, var(--primary-text-color, #fff) 10%, var(--ha-card-background, var(--card-background-color, #1e1e24))));
+    --card-surface-hover: color-mix(in srgb, var(--md-sys-color-on-surface, var(--card-text)) 18%, var(--card-surface));
+    --card-border: var(--md-sys-color-outline-variant, var(--md-sys-color-outline, color-mix(in srgb, var(--primary-text-color, #fff) 24%, transparent)));
+    --card-text: var(--md-sys-color-on-surface, var(--primary-text-color, #ffffff));
+    --card-text-muted: var(--md-sys-color-on-surface-variant, color-mix(in srgb, var(--primary-text-color, #fff) 75%, transparent));
+    --card-on-accent: var(--md-sys-color-on-primary, #ffffff);
+  }
+
   ha-card {
     background: var(--card-bg);
     border: 1px solid var(--card-border);
-    border-radius: var(--ha-card-border-radius, 20px);
+    border-radius: var(--ha-card-border-radius, 16px);
     padding: 16px;
     box-shadow: var(--ha-card-box-shadow, 0 4px 20px rgba(0, 0, 0, 0.15));
     box-sizing: border-box;
@@ -33,6 +47,10 @@ export const cardStyles = css`
     overflow: hidden;
     position: relative;
     font-family: var(--paper-font-body1_-_font-family, inherit);
+  }
+
+  ha-card.google-home {
+    border-radius: 28px;
   }
 
   /* Header */
@@ -110,7 +128,123 @@ export const cardStyles = css`
     --mdc-icon-size: 16px;
   }
 
-  /* Hero Section */
+  /* ── Classic Full View Hero Block (Squarish) ── */
+  .lock-block {
+    background: var(--card-surface);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    padding: 16px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin: 4px 0 16px;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .lock-block:hover {
+    background: var(--card-surface-hover);
+    border-color: var(--card-accent);
+  }
+
+  .lock-block-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+  }
+
+  .lock-block-icon-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    border: 1px solid var(--card-border);
+    background: var(--card-bg);
+    color: var(--card-text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+  }
+
+  .lock-block.locked .lock-block-icon-btn {
+    background: color-mix(in srgb, var(--card-accent) 22%, var(--card-surface));
+    color: var(--card-accent);
+    border-color: var(--card-accent);
+    box-shadow: 0 0 14px color-mix(in srgb, var(--card-accent) 40%, transparent);
+  }
+
+  .lock-block.unlocked .lock-block-icon-btn {
+    background: color-mix(in srgb, #4caf50 22%, var(--card-surface));
+    color: #4caf50;
+    border-color: #4caf50;
+    box-shadow: 0 0 14px rgba(76, 175, 80, 0.35);
+  }
+
+  .lock-block-icon-btn ha-icon {
+    --mdc-icon-size: 24px;
+  }
+
+  .lock-block-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .lock-block-state {
+    font-size: 1.25rem;
+    font-weight: 800;
+    letter-spacing: -0.3px;
+    line-height: 1.2;
+  }
+
+  .lock-block.locked .lock-block-state {
+    color: var(--card-accent);
+  }
+
+  .lock-block.unlocked .lock-block-state {
+    color: #4caf50;
+  }
+
+  .lock-block-sub {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--card-text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .lock-block-toggle-btn {
+    padding: 8px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--card-border);
+    background: var(--card-bg);
+    color: var(--card-text);
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+  }
+
+  .lock-block-toggle-btn:hover {
+    background: var(--card-surface-hover);
+    border-color: var(--card-accent);
+  }
+
+  .lock-block-toggle-btn ha-icon {
+    --mdc-icon-size: 16px;
+  }
+
+  /* Hero Section (Google Home Round Dial) */
   .hero-container {
     display: flex;
     flex-direction: column;
@@ -520,7 +654,8 @@ export const cardStyles = css`
   .card-footer {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
+    gap: 12px;
     margin-top: 16px;
     padding-top: 12px;
     border-top: 1px solid var(--card-border);
@@ -589,7 +724,7 @@ export const cardStyles = css`
     --mdc-icon-size: 18px;
   }
 
-  /* ── Compact Card (Expandable) ── */
+  /* ── Compact Card: Classic (Squarish) vs Google Home (Round) ── */
   ha-card.compact-card {
     padding: 14px 16px;
     display: flex;
@@ -598,6 +733,57 @@ export const cardStyles = css`
     cursor: pointer;
     user-select: none;
     transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  ha-card.compact-card.classic {
+    border-radius: 16px;
+    border: 1px solid var(--card-border);
+    background: var(--card-bg);
+  }
+
+  ha-card.compact-card.classic .compact-icon-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    border: 1px solid var(--card-border);
+  }
+
+  ha-card.compact-card.classic .compact-action-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    border: 1px solid var(--card-border);
+  }
+
+  ha-card.compact-card.classic .compact-value {
+    font-size: 2.2rem;
+    font-weight: 800;
+  }
+
+  ha-card.compact-card.google-home {
+    border-radius: 28px;
+    border: none;
+    box-shadow: none;
+    background: var(--card-bg);
+  }
+
+  ha-card.compact-card.google-home .compact-icon-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: none;
+  }
+
+  ha-card.compact-card.google-home .compact-action-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: none;
+  }
+
+  ha-card.compact-card.google-home .compact-value {
+    font-size: 2.4rem;
+    font-weight: 400;
   }
 
   ha-card.compact-card:hover {
@@ -611,10 +797,6 @@ export const cardStyles = css`
   }
 
   .compact-icon-btn {
-    width: 38px;
-    height: 38px;
-    border-radius: 12px;
-    border: 1px solid var(--card-border);
     cursor: pointer;
     display: flex;
     align-items: center;

@@ -5,7 +5,9 @@ export interface AtombergLockCardConfig {
   theme?: string;
   layout?: 'default' | 'compact';
   card_layout?: 'default' | 'compact';
+  full_layout?: 'default' | 'google_home' | string;
   accent_color?: string;
+  main_color?: string;
   default_duration?: number;
   otp_sensor?: string;
   battery_sensor?: string;

@@ -51,6 +51,24 @@ export class AtombergLockCard extends LitElement {
     return cardStyles;
   }
 
+  protected updated(changedProperties: Map<string | number | symbol, unknown>): void {
+    super.updated(changedProperties);
+    if (this._config?.theme === 'material_you') {
+      this.setAttribute('theme', 'material_you');
+    } else {
+      this.removeAttribute('theme');
+    }
+  }
+
+  private _haptic(type: 'selection' | 'light' | 'medium' | 'heavy' | 'success' | 'warning' | 'failure' = 'selection'): void {
+    const event = new CustomEvent('haptic', {
+      detail: type,
+      bubbles: true,
+      composed: true,
+    });
+    window.dispatchEvent(event);
+  }
+
   private _isCompact(): boolean {
     return (this._config?.layout || this._config?.card_layout) === 'compact';
   }
@@ -75,7 +93,7 @@ export class AtombergLockCard extends LitElement {
             select: {
               options: [
                 { label: 'Default HA Theme', value: 'default' },
-                { label: 'Material You', value: 'material_you' },
+                { label: 'Material You (Optimized for Material 3 Theme)', value: 'material_you' },
               ],
             },
           },
@@ -93,12 +111,25 @@ export class AtombergLockCard extends LitElement {
           },
         },
         {
+          name: 'full_layout',
+          label: 'Full View Style',
+          selector: {
+            select: {
+              options: [
+                { label: 'Classic', value: 'default' },
+                { label: 'Google Home', value: 'google_home' },
+              ],
+            },
+          },
+        },
+        {
           name: '',
           type: 'expandable',
           title: 'Theming & Colors',
           icon: 'mdi:palette',
           schema: [
-            { name: 'accent_color', label: 'Accent Color', selector: { ui_color: {} } },
+            { name: 'accent_color', label: 'Accent Color Override', selector: { ui_color: {} } },
+            { name: 'main_color', label: 'Background Color Override', selector: { ui_color: {} } },
           ],
         },
         {
@@ -453,31 +484,79 @@ export class AtombergLockCard extends LitElement {
         </div>
       </div>
 
-      <!-- Hero Lock Dial -->
-      <div class="hero-container">
-        <div
-          class="lock-dial ${isLocked ? 'locked' : 'unlocked'}"
-          @click="${this._toggleLock}"
-          title="${isLocked ? 'Click to Unlock' : 'Click to Lock'}"
-        >
-          <ha-icon
-            icon="${isLocked
-              ? 'mdi:lock'
-              : isUnlocking
-              ? 'mdi:lock-clock'
-              : isLocking
-              ? 'mdi:lock-reset'
-              : 'mdi:lock-open-variant'}"
-            style="color: ${isLocked ? 'var(--card-locked)' : 'var(--card-unlocked)'};"
-          ></ha-icon>
-        </div>
-        <div class="dial-status-label" style="color: ${isLocked ? 'var(--card-locked)' : 'var(--card-unlocked)'};">
-          ${isUnlocking ? 'Unlocking...' : isLocking ? 'Locking...' : isLocked ? 'Locked' : 'Unlocked'}
-        </div>
-        <div class="dial-subtext">
-          ${isLocked ? 'Tap dial to unlock' : 'Tap dial to lock'}
-        </div>
-      </div>
+      <!-- Hero Lock Control: Classic (Squarish Block) vs Google Home (Round Dial) -->
+      ${this._config.full_layout === 'google_home'
+        ? html`
+            <div class="hero-container">
+              <div
+                class="lock-dial ${isLocked ? 'locked' : 'unlocked'}"
+                @click="${() => {
+                  this._haptic('selection');
+                  this._toggleLock();
+                }}"
+                title="${isLocked ? 'Click to Unlock' : 'Click to Lock'}"
+              >
+                <ha-icon
+                  icon="${isLocked
+                    ? 'mdi:lock'
+                    : isUnlocking
+                    ? 'mdi:lock-clock'
+                    : isLocking
+                    ? 'mdi:lock-reset'
+                    : 'mdi:lock-open-variant'}"
+                  style="color: ${isLocked ? 'var(--card-locked)' : 'var(--card-unlocked)'};"
+                ></ha-icon>
+              </div>
+              <div class="dial-status-label" style="color: ${isLocked ? 'var(--card-locked)' : 'var(--card-unlocked)'};">
+                ${isUnlocking ? 'Unlocking...' : isLocking ? 'Locking...' : isLocked ? 'Locked' : 'Unlocked'}
+              </div>
+              <div class="dial-subtext">
+                ${isLocked ? 'Tap dial to unlock' : 'Tap dial to lock'}
+              </div>
+            </div>
+          `
+        : html`
+            <div
+              class="lock-block ${isLocked ? 'locked' : 'unlocked'}"
+              @click="${() => {
+                this._haptic('selection');
+                this._toggleLock();
+              }}"
+            >
+              <div class="lock-block-left">
+                <div class="lock-block-icon-btn">
+                  <ha-icon
+                    icon="${isLocked
+                      ? 'mdi:lock'
+                      : isUnlocking
+                      ? 'mdi:lock-clock'
+                      : isLocking
+                      ? 'mdi:lock-reset'
+                      : 'mdi:lock-open-variant'}"
+                  ></ha-icon>
+                </div>
+                <div class="lock-block-text">
+                  <div class="lock-block-state">
+                    ${isUnlocking ? 'Unlocking...' : isLocking ? 'Locking...' : isLocked ? 'Locked' : 'Unlocked'}
+                  </div>
+                  <div class="lock-block-sub">
+                    ${isLocked ? 'Door is secured' : 'Door is unlocked'} • Bluetooth BLE
+                  </div>
+                </div>
+              </div>
+              <button
+                class="lock-block-toggle-btn"
+                @click="${(e: Event) => {
+                  e.stopPropagation();
+                  this._haptic('selection');
+                  this._toggleLock();
+                }}"
+              >
+                <ha-icon icon="${isLocked ? 'mdi:lock-open-variant' : 'mdi:lock'}"></ha-icon>
+                <span>${isLocked ? 'Unlock' : 'Lock'}</span>
+              </button>
+            </div>
+          `}
 
       <div class="section-divider"></div>
 
@@ -647,11 +726,21 @@ export class AtombergLockCard extends LitElement {
       ? 'Locked'
       : 'Unlocked';
 
+    const isGoogleHome = this._config.full_layout === 'google_home';
+    const layoutClass = isGoogleHome ? 'google-home' : 'classic';
+    const cardStyle = [
+      this._config.accent_color ? `--card-accent: ${this._config.accent_color};` : '',
+      this._config.main_color ? `--card-bg: ${this._config.main_color};` : '',
+    ].filter(Boolean).join(' ');
+
     return html`
       <ha-card
-        class="compact-card"
-        style="${this._config.accent_color ? `--card-accent: ${this._config.accent_color};` : ''}"
-        @click="${() => (this._expanded = true)}"
+        class="compact-card ${layoutClass}"
+        style="${cardStyle}"
+        @click="${() => {
+          this._haptic('selection');
+          this._expanded = true;
+        }}"
       >
         <!-- Compact Header: Clean single-line header matching Fan/AC/Washer -->
         <div class="compact-header">
@@ -830,8 +919,15 @@ export class AtombergLockCard extends LitElement {
       return this._renderCompact(stateObj, batteryNum, allHistory.length, friendlyName);
     }
 
+    const isGoogleHome = this._config.full_layout === 'google_home';
+    const cardClasses = isGoogleHome ? 'google-home' : 'classic';
+    const cardStyle = [
+      this._config.accent_color ? `--card-accent: ${this._config.accent_color};` : '',
+      this._config.main_color ? `--card-bg: ${this._config.main_color};` : '',
+    ].filter(Boolean).join(' ');
+
     return html`
-      <ha-card style="${this._config.accent_color ? `--card-accent: ${this._config.accent_color};` : ''}">
+      <ha-card class="${cardClasses}" style="${cardStyle}">
         ${this._currentView === 'history'
           ? this._renderHistoryView(activeOtps, allHistory)
           : this._renderMainView(
