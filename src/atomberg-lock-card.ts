@@ -45,6 +45,7 @@ export class AtombergLockCard extends LitElement {
   @state() private _currentView: 'main' | 'history' = 'main';
   @state() private _historyFilter: 'all' | 'active' = 'all';
   @state() private _expanded: boolean = false;
+  @state() private _shareModalData: { otp: string; expiresAt: string | number } | null = null;
 
   static get styles() {
     return cardStyles;
@@ -353,26 +354,50 @@ export class AtombergLockCard extends LitElement {
     return `${date.toLocaleDateString([], { month: 'short', day: 'numeric' })}, ${timeStr}`;
   }
 
-  private async _shareOtp(otp: string, expiresAt: string | number): Promise<void> {
-    if (!otp) return;
-    const friendlyExpiry = this._formatFriendlyExpiry(expiresAt);
-    const msg = `Your guest access PIN for Atomberg Smart Lock is ${otp} followed by #. Valid until ${friendlyExpiry}.`;
+  private _openShareModal(otp: string, expiresAt: string | number): void {
+    this._shareModalData = { otp, expiresAt };
+  }
 
-    if (typeof navigator !== 'undefined' && navigator.share && typeof navigator.share === 'function') {
-      try {
-        await navigator.share({
-          title: 'Atomberg Smart Lock Guest PIN',
-          text: msg,
-        });
-        return;
-      } catch (err: any) {
-        if (err && err.name === 'AbortError') return;
-      }
+  private _closeShareModal(): void {
+    this._shareModalData = null;
+  }
+
+  private _getShareMessage(otp: string, expiresAt: string | number): string {
+    const friendlyExpiry = this._formatFriendlyExpiry(expiresAt);
+    return `Your guest access PIN for Atomberg Smart Lock is ${otp} followed by #. Valid until ${friendlyExpiry}.`;
+  }
+
+  private _shareViaWhatsApp(msg: string): void {
+    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
+    window.open(url, '_blank', 'noreferrer');
+    this._closeShareModal();
+  }
+
+  private _shareViaSms(msg: string): void {
+    const url = `sms:?body=${encodeURIComponent(msg)}`;
+    window.location.href = url;
+    this._closeShareModal();
+  }
+
+  private _shareViaSystem(msg: string): void {
+    const isAndroid = typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent);
+    if (isAndroid) {
+      window.location.href = `intent:#Intent;action=android.intent.action.SEND;type=text/plain;S.android.intent.extra.TEXT=${encodeURIComponent(msg)};end;`;
+      this._closeShareModal();
+      return;
     }
 
-    // Fallback on desktop and WebViews without share dialog: copy formatted invitation text
-    this._copyToClipboard(msg);
-    this._triggerToast('Invitation text copied to clipboard!');
+    if (typeof navigator !== 'undefined' && navigator.share && typeof navigator.share === 'function') {
+      navigator.share({
+        title: 'Atomberg Smart Lock Guest PIN',
+        text: msg,
+      }).then(() => this._closeShareModal()).catch(() => {});
+      return;
+    }
+
+    this._fallbackCopy(msg);
+    this._triggerToast('Invitation copied to clipboard!');
+    this._closeShareModal();
   }
 
   private _renderMainView(
@@ -504,7 +529,7 @@ export class AtombergLockCard extends LitElement {
                   <ha-icon icon="mdi:content-copy"></ha-icon>
                   <span>Copy PIN</span>
                 </div>
-                <div class="otp-action-btn" @click="${() => this._shareOtp(currentOtp.otp, currentOtp.valid_until_timestamp || currentOtp.expires_at)}">
+                <div class="otp-action-btn" @click="${() => this._openShareModal(currentOtp.otp, currentOtp.valid_until_timestamp || currentOtp.expires_at)}">
                   <ha-icon icon="mdi:share-variant"></ha-icon>
                   <span>Share PIN</span>
                 </div>
@@ -588,7 +613,7 @@ export class AtombergLockCard extends LitElement {
                         <ha-icon icon="mdi:content-copy"></ha-icon>
                         <span>Copy PIN</span>
                       </div>
-                      <div class="history-action-btn" @click="${() => this._shareOtp(item.otp, item.valid_until_timestamp || item.expires_at)}">
+                      <div class="history-action-btn" @click="${() => this._openShareModal(item.otp, item.valid_until_timestamp || item.expires_at)}">
                         <ha-icon icon="mdi:share-variant"></ha-icon>
                         <span>Share</span>
                       </div>
@@ -628,7 +653,7 @@ export class AtombergLockCard extends LitElement {
         style="${this._config.accent_color ? `--card-accent: ${this._config.accent_color};` : ''}"
         @click="${() => (this._expanded = true)}"
       >
-        <!-- Compact Header -->
+        <!-- Compact Header: Clean single-line header matching Fan/AC/Washer -->
         <div class="compact-header">
           <button
             class="compact-icon-btn ${isLocked ? 'locked' : 'unlocked'} ${isUnavailable ? 'disabled' : ''}"
@@ -640,41 +665,38 @@ export class AtombergLockCard extends LitElement {
           >
             <ha-icon icon="${isLocked ? 'mdi:lock' : 'mdi:lock-open-variant'}"></ha-icon>
           </button>
-          <div class="compact-title-wrap">
-            <div class="compact-title">${friendlyName}</div>
-            <div class="compact-subtitle">
-              ${batteryNum !== null
-                ? html`<ha-icon icon="mdi:battery" style="--mdc-icon-size: 14px;"></ha-icon><span>${batteryNum}%</span> • `
-                : ''}
-              <span>${isUnavailable ? 'Offline' : 'Bluetooth BLE'}</span>
-            </div>
-          </div>
+          <div class="compact-title">${friendlyName}</div>
           <ha-icon class="compact-chevron" icon="mdi:chevron-right"></ha-icon>
         </div>
 
-        <!-- Compact Hero State -->
+        <!-- Compact Hero State: Horizontally Centered -->
         <div class="compact-center">
           <div class="compact-value ${isLocked ? 'locked' : 'unlocked'}">${statusText}</div>
         </div>
 
-        <!-- Compact Footer Actions -->
+        <!-- Compact Footer: Symmetrical 3-element row matching sibling cards -->
         <div class="compact-footer">
           <button
-            class="compact-action-btn pin-btn"
-            title="Generate Guest Access PIN"
+            class="compact-action-btn ${this._isGenerating ? 'generating' : ''}"
+            title="Generate PIN"
             @click="${(e: Event) => {
               e.stopPropagation();
-              this._expanded = true;
               this._generateOtp();
             }}"
           >
-            <ha-icon icon="mdi:key-outline"></ha-icon>
-            <span>Generate PIN</span>
+            <ha-icon icon="${this._isGenerating ? 'mdi:loading' : 'mdi:key-outline'}"></ha-icon>
           </button>
+
+          <div class="compact-telemetry">
+            ${batteryNum !== null
+              ? html`<ha-icon icon="mdi:battery" style="--mdc-icon-size: 14px;"></ha-icon><span>${batteryNum}%</span> • `
+              : ''}
+            <span>${isUnavailable ? 'Offline' : 'Bluetooth BLE'}</span>
+          </div>
 
           <button
             class="compact-action-btn"
-            title="View OTP History & Audit Logs"
+            title="View Logs (${historyCount})"
             @click="${(e: Event) => {
               e.stopPropagation();
               this._currentView = 'history';
@@ -682,13 +704,75 @@ export class AtombergLockCard extends LitElement {
             }}"
           >
             <ha-icon icon="mdi:history"></ha-icon>
-            <span>Logs (${historyCount})</span>
           </button>
         </div>
 
         <!-- Toast Notification Feedback -->
         <div class="toast ${this._showToast ? 'show' : ''}">${this._toastMessage}</div>
+
+        <!-- Share Selector Modal Overlay -->
+        ${this._renderShareModal()}
       </ha-card>
+    `;
+  }
+
+  private _renderShareModal(): TemplateResult {
+    if (!this._shareModalData) return html``;
+    const { otp, expiresAt } = this._shareModalData;
+    const msg = this._getShareMessage(otp, expiresAt);
+    const isAndroid = typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent);
+
+    return html`
+      <div class="share-modal-backdrop" @click="${this._closeShareModal}">
+        <div class="share-modal" @click="${(e: Event) => e.stopPropagation()}">
+          <div class="share-modal-header">
+            <div class="share-modal-title">
+              <ha-icon icon="mdi:share-variant"></ha-icon>
+              <span>Share Guest PIN</span>
+            </div>
+            <button class="share-close-btn" @click="${this._closeShareModal}" title="Close">
+              <ha-icon icon="mdi:close" style="--mdc-icon-size: 20px;"></ha-icon>
+            </button>
+          </div>
+
+          <div class="share-preview-box">
+            ${msg}
+          </div>
+
+          <div class="share-target-list">
+            <button class="share-target-btn whatsapp" @click="${() => this._shareViaWhatsApp(msg)}">
+              <ha-icon icon="mdi:whatsapp"></ha-icon>
+              <span>Share via WhatsApp</span>
+            </button>
+
+            <button class="share-target-btn sms" @click="${() => this._shareViaSms(msg)}">
+              <ha-icon icon="mdi:message-text"></ha-icon>
+              <span>Share via SMS</span>
+            </button>
+
+            ${isAndroid
+              ? html`
+                  <button class="share-target-btn system" @click="${() => this._shareViaSystem(msg)}">
+                    <ha-icon icon="mdi:share-variant"></ha-icon>
+                    <span>System Share Sheet</span>
+                  </button>
+                `
+              : ''}
+
+            <button
+              class="share-target-btn"
+              @click="${() => {
+                this._fallbackCopy(msg);
+                this._triggerToast('Invitation copied to clipboard!');
+                this._closeShareModal();
+              }}"
+            >
+              <ha-icon icon="mdi:content-copy"></ha-icon>
+              <span>Copy Full Invitation</span>
+            </button>
+          </div>
+        </div>
+      </div>
     `;
   }
 
@@ -762,6 +846,9 @@ export class AtombergLockCard extends LitElement {
 
         <!-- Toast Notification Feedback -->
         <div class="toast ${this._showToast ? 'show' : ''}">${this._toastMessage}</div>
+
+        <!-- Share Selector Modal Overlay -->
+        ${this._renderShareModal()}
       </ha-card>
     `;
   }

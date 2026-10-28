@@ -3,15 +3,20 @@ import { css } from 'lit';
 export const cardStyles = css`
   :host {
     display: block;
-    --card-accent: var(--atomberg-accent, var(--primary-color, #f5a623));
+    --atomberg-accent: var(--primary-color, #f5a623);
+    --card-accent: var(--atomberg-accent);
     --card-accent-rgb: 245, 166, 35;
     --card-on-accent: #121212;
-    --card-bg: var(--ha-card-background, var(--card-background-color, #1e1e24));
-    --card-surface: color-mix(in srgb, var(--card-bg) 92%, var(--primary-text-color, #ffffff));
-    --card-surface-hover: color-mix(in srgb, var(--card-bg) 84%, var(--primary-text-color, #ffffff));
-    --card-border: var(--ha-card-border-color, var(--divider-color, rgba(255, 255, 255, 0.08)));
-    --card-text: var(--primary-text-color, #ffffff);
-    --card-text-muted: var(--secondary-text-color, #9e9e9e);
+
+    /* Surfaces - color-mix ensures deep contrast and purple tint inheritance in HA themes */
+    --card-bg: var(--appliance-bg, var(--ha-card-background, var(--card-background-color, var(--lovelace-background, #1e1e24))));
+    --card-surface: var(--appliance-surface, color-mix(in srgb, var(--primary-text-color, #fff) 10%, var(--ha-card-background, var(--card-background-color, #1e1e24))));
+    --card-surface-hover: var(--appliance-surface-hover, color-mix(in srgb, var(--primary-text-color, #fff) 18%, var(--card-surface)));
+    --card-border: var(--appliance-border, color-mix(in srgb, var(--primary-text-color, #fff) 24%, transparent));
+
+    /* Text */
+    --card-text: var(--appliance-text, var(--primary-text-color, #ffffff));
+    --card-text-muted: var(--appliance-text-2, var(--secondary-text-color, #9e9e9e));
     --card-success: #4caf50;
     --card-locked: var(--card-accent);
     --card-unlocked: #4caf50;
@@ -21,7 +26,7 @@ export const cardStyles = css`
     background: var(--card-bg);
     border: 1px solid var(--card-border);
     border-radius: var(--ha-card-border-radius, 20px);
-    padding: 18px;
+    padding: 16px;
     box-shadow: var(--ha-card-box-shadow, 0 4px 20px rgba(0, 0, 0, 0.15));
     box-sizing: border-box;
     color: var(--card-text);
@@ -671,16 +676,17 @@ export const cardStyles = css`
 
   .compact-center {
     display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    padding: 0 4px;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 0;
   }
 
   .compact-value {
-    font-size: 1.85rem;
+    font-size: 2.2rem;
     font-weight: 800;
     letter-spacing: -0.5px;
     line-height: 1.1;
+    text-align: center;
   }
 
   .compact-value.locked {
@@ -696,40 +702,171 @@ export const cardStyles = css`
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-    padding-top: 8px;
-    border-top: 1px solid var(--card-border);
+    padding: 0 2px;
   }
 
   .compact-action-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 12px;
-    border-radius: 12px;
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
     border: 1px solid var(--card-border);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     background: var(--card-surface);
     color: var(--card-text);
-    font-size: 0.8rem;
-    font-weight: 600;
-    cursor: pointer;
     transition: all 0.2s ease;
+    flex-shrink: 0;
   }
 
   .compact-action-btn:hover {
     background: var(--card-surface-hover);
-  }
-
-  .compact-action-btn ha-icon {
-    --mdc-icon-size: 16px;
-  }
-
-  .compact-action-btn.pin-btn {
-    background: var(--card-accent);
-    color: #121212;
     border-color: var(--card-accent);
   }
 
-  .compact-action-btn.pin-btn:hover {
-    filter: brightness(1.08);
+  .compact-action-btn ha-icon {
+    --mdc-icon-size: 18px;
+  }
+
+  .compact-action-btn.generating {
+    background: var(--card-accent);
+    color: var(--card-on-accent);
+    border-color: var(--card-accent);
+    box-shadow: 0 0 12px color-mix(in srgb, var(--card-accent) 40%, transparent);
+  }
+
+  .compact-telemetry {
+    font-size: 0.8rem;
+    color: var(--card-text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    flex: 1;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* ── Share Selector Modal ── */
+  .share-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 14px;
+    box-sizing: border-box;
+  }
+
+  .share-modal {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 18px;
+    padding: 16px;
+    width: 100%;
+    max-width: 330px;
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.55);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    box-sizing: border-box;
+  }
+
+  .share-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .share-modal-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--card-text);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .share-modal-title ha-icon {
+    color: var(--card-accent);
+    --mdc-icon-size: 20px;
+  }
+
+  .share-close-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: var(--card-text-muted);
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+  }
+
+  .share-close-btn:hover {
+    color: var(--card-text);
+  }
+
+  .share-preview-box {
+    font-size: 0.8rem;
+    line-height: 1.35;
+    background: var(--card-surface);
+    border: 1px solid var(--card-border);
+    border-radius: 10px;
+    padding: 10px;
+    color: var(--card-text-muted);
+    user-select: text;
+  }
+
+  .share-target-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .share-target-btn {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    border: 1px solid var(--card-border);
+    background: var(--card-surface);
+    color: var(--card-text);
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-align: left;
+    outline: none;
+  }
+
+  .share-target-btn:hover {
+    background: var(--card-surface-hover);
+    border-color: var(--card-accent);
+  }
+
+  .share-target-btn.whatsapp ha-icon {
+    color: #25d366;
+  }
+
+  .share-target-btn.sms ha-icon {
+    color: #3b82f6;
+  }
+
+  .share-target-btn.system ha-icon {
+    color: var(--card-accent);
+  }
+
+  .share-target-btn ha-icon {
+    --mdc-icon-size: 20px;
   }
 `;
