@@ -39,6 +39,7 @@ export class AtombergLockCard extends LitElement {
   @state() private _config!: AtombergLockCardConfig;
   @state() private _selectedDuration: number = 0.5;
   @state() private _isGenerating: boolean = false;
+  @state() private _isSyncing: boolean = false;
   @state() private _latestOtp: ActiveOtpRecord | null = null;
   @state() private _toastMessage: string = '';
   @state() private _showToast: boolean = false;
@@ -292,6 +293,35 @@ export class AtombergLockCard extends LitElement {
     }
   }
 
+  private async _syncLogs(): Promise<void> {
+    if (this._isSyncing || !this.hass) return;
+    this._isSyncing = true;
+    this._haptic('light');
+
+    const primary = this._getEntityId();
+    const baseName = primary.replace('lock.', '');
+    let syncBtnId = `button.${baseName}_sync_status`;
+    if (!this.hass.states[syncBtnId]) {
+      const buttonKeys = Object.keys(this.hass.states).filter((e) => e.startsWith('button.'));
+      syncBtnId = buttonKeys.find((k) => k.includes(baseName) && (k.includes('sync') || k.includes('log'))) || '';
+    }
+
+    try {
+      if (syncBtnId && this.hass.states[syncBtnId]) {
+        await this.hass.callService('button', 'press', { entity_id: syncBtnId });
+      } else {
+        await this.hass.callService('homeassistant', 'update_entity', { entity_id: primary });
+      }
+      this._triggerToast('Sync triggered over Bluetooth');
+    } catch (err: any) {
+      this._triggerToast(`Sync failed: ${err.message || err}`);
+    } finally {
+      setTimeout(() => {
+        this._isSyncing = false;
+      }, 2500);
+    }
+  }
+
   private _fallbackCopy(text: string): void {
     try {
       const textArea = document.createElement('textarea');
@@ -439,7 +469,8 @@ export class AtombergLockCard extends LitElement {
     historyCount: number,
     lastUserState: string | null,
     lastEventState: string | null,
-    friendlyName: string
+    friendlyName: string,
+    isCloudConnected: boolean = false
   ): TemplateResult {
     const isLocked = stateObj.state === 'locked';
     const isUnlocking = stateObj.state === 'unlocking';
@@ -561,62 +592,65 @@ export class AtombergLockCard extends LitElement {
             </div>
           `}
 
-      <div class="section-divider"></div>
-
-      <!-- Guest OTP Generator Section -->
-      <div class="section-title">
-        <ha-icon icon="mdi:shield-key-outline"></ha-icon>
-        <span>Offline Guest OTP Generator</span>
-      </div>
-
-      <!-- Duration Segmented Chips -->
-      <div class="pill-group">
-        ${DURATION_OPTIONS.map(
-          (opt) => html`
-            <div
-              class="pill-chip ${this._selectedDuration === opt.value ? 'selected' : ''}"
-              @click="${() => (this._selectedDuration = opt.value)}"
-              title="${opt.desc}"
-            >
-              ${opt.label}
-            </div>
-          `
-        )}
-      </div>
-
-      <button
-        class="btn-generate"
-        @click="${this._generateOtp}"
-        ?disabled="${this._isGenerating}"
-      >
-        <ha-icon icon="${this._isGenerating ? 'mdi:loading' : 'mdi:numeric'}"></ha-icon>
-        <span>${this._isGenerating ? 'Calculating PIN...' : 'Generate Keypad PIN'}</span>
-      </button>
-
-      <!-- Current / Generated OTP Hero Display -->
-      ${currentOtp
+      <!-- Guest OTP Generator Section (Strictly for Cloud-Connected Locks) -->
+      ${isCloudConnected
         ? html`
-            <div class="otp-hero-box">
-              <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: var(--card-accent);">
-                Active Keypad PIN (${currentOtp.duration_hours}h)
-              </div>
-              <div class="otp-digits" @click="${() => this._copyToClipboard(currentOtp.otp)}">
-                ${currentOtp.otp.slice(0, 4)}  ${currentOtp.otp.slice(4)}
-              </div>
-              <div class="otp-meta">
-                Valid until: <strong>${this._formatFriendlyExpiry(currentOtp.valid_until_timestamp || currentOtp.expires_at)}</strong>
-              </div>
-              <div class="otp-actions">
-                <div class="otp-action-btn" @click="${() => this._copyToClipboard(currentOtp.otp)}">
-                  <ha-icon icon="mdi:content-copy"></ha-icon>
-                  <span>Copy PIN</span>
-                </div>
-                <div class="otp-action-btn" @click="${() => this._openShareModal(currentOtp.otp, currentOtp.valid_until_timestamp || currentOtp.expires_at)}">
-                  <ha-icon icon="mdi:share-variant"></ha-icon>
-                  <span>Share PIN</span>
-                </div>
-              </div>
+            <div class="section-divider"></div>
+            <div class="section-title">
+              <ha-icon icon="mdi:shield-key-outline"></ha-icon>
+              <span>Remote Guest OTP Generator</span>
             </div>
+
+            <!-- Duration Segmented Chips -->
+            <div class="pill-group">
+              ${DURATION_OPTIONS.map(
+                (opt) => html`
+                  <div
+                    class="pill-chip ${this._selectedDuration === opt.value ? 'selected' : ''}"
+                    @click="${() => (this._selectedDuration = opt.value)}"
+                    title="${opt.desc}"
+                  >
+                    ${opt.label}
+                  </div>
+                `
+              )}
+            </div>
+
+            <button
+              class="btn-generate"
+              @click="${this._generateOtp}"
+              ?disabled="${this._isGenerating}"
+            >
+              <ha-icon icon="${this._isGenerating ? 'mdi:loading' : 'mdi:numeric'}"></ha-icon>
+              <span>${this._isGenerating ? 'Calculating PIN...' : 'Generate Keypad PIN'}</span>
+            </button>
+
+            <!-- Current / Generated OTP Hero Display -->
+            ${currentOtp
+              ? html`
+                  <div class="otp-hero-box">
+                    <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: var(--card-accent);">
+                      Active Keypad PIN (${currentOtp.duration_hours}h)
+                    </div>
+                    <div class="otp-digits" @click="${() => this._copyToClipboard(currentOtp.otp)}">
+                      ${currentOtp.otp.slice(0, 4)}  ${currentOtp.otp.slice(4)}
+                    </div>
+                    <div class="otp-meta">
+                      Valid until: <strong>${this._formatFriendlyExpiry(currentOtp.valid_until_timestamp || currentOtp.expires_at)}</strong>
+                    </div>
+                    <div class="otp-actions">
+                      <div class="otp-action-btn" @click="${() => this._copyToClipboard(currentOtp.otp)}">
+                        <ha-icon icon="mdi:content-copy"></ha-icon>
+                        <span>Copy PIN</span>
+                      </div>
+                      <div class="otp-action-btn" @click="${() => this._openShareModal(currentOtp.otp, currentOtp.valid_until_timestamp || currentOtp.expires_at)}">
+                        <ha-icon icon="mdi:share-variant"></ha-icon>
+                        <span>Share PIN</span>
+                      </div>
+                    </div>
+                  </div>
+                `
+              : ''}
           `
         : ''}
 
@@ -650,10 +684,12 @@ export class AtombergLockCard extends LitElement {
   private _renderHistoryView(
     activeOtps: ActiveOtpRecord[],
     allHistory: ActiveOtpRecord[],
-    unlockHistory: any[] = []
+    unlockHistory: any[] = [],
+    isCloudConnected: boolean = false
   ): TemplateResult {
     const nowTs = Math.floor(Date.now() / 1000);
     const displayedOtps = this._historyFilter === 'active' ? activeOtps : allHistory;
+    const activeTab = isCloudConnected ? this._historyTab : 'unlock';
 
     return html`
       <!-- History Page Header -->
@@ -664,33 +700,49 @@ export class AtombergLockCard extends LitElement {
         </div>
         <div class="history-title">Activity & Logs</div>
         <div class="history-count-badge">
-          ${this._historyTab === 'unlock' ? `${unlockHistory.length} Events` : `${displayedOtps.length} PINs`}
+          ${activeTab === 'unlock' ? `${unlockHistory.length} Events` : `${displayedOtps.length} PINs`}
         </div>
       </div>
 
-      <!-- Main History Category Switcher -->
-      <div class="history-main-tabs">
-        <div
-          class="history-tab ${this._historyTab === 'unlock' ? 'selected' : ''}"
-          @click="${() => (this._historyTab = 'unlock')}"
-        >
-          <ha-icon icon="mdi:door-open" style="--mdc-icon-size: 16px;"></ha-icon>
-          <span>Unlock Activity (${unlockHistory.length})</span>
-        </div>
-        <div
-          class="history-tab ${this._historyTab === 'otp' ? 'selected' : ''}"
-          @click="${() => (this._historyTab = 'otp')}"
-        >
-          <ha-icon icon="mdi:key-outline" style="--mdc-icon-size: 16px;"></ha-icon>
-          <span>Generated PINs (${allHistory.length})</span>
-        </div>
-      </div>
+      <!-- Main History Category Switcher (Only shown if cloud OTPs exist) -->
+      ${isCloudConnected
+        ? html`
+            <div class="history-main-tabs">
+              <div
+                class="history-tab ${this._historyTab === 'unlock' ? 'selected' : ''}"
+                @click="${() => (this._historyTab = 'unlock')}"
+              >
+                <ha-icon icon="mdi:door-open" style="--mdc-icon-size: 16px;"></ha-icon>
+                <span>Unlock Activity (${unlockHistory.length})</span>
+              </div>
+              <div
+                class="history-tab ${this._historyTab === 'otp' ? 'selected' : ''}"
+                @click="${() => (this._historyTab = 'otp')}"
+              >
+                <ha-icon icon="mdi:key-outline" style="--mdc-icon-size: 16px;"></ha-icon>
+                <span>Generated PINs (${allHistory.length})</span>
+              </div>
+            </div>
+          `
+        : ''}
 
-      ${this._historyTab === 'unlock'
+      ${activeTab === 'unlock'
         ? html`
             <!-- Unlock Activity Tab -->
+            <div class="history-actions-row">
+              <button
+                class="sync-history-btn ${this._isSyncing ? 'syncing' : ''}"
+                ?disabled="${this._isSyncing}"
+                @click="${() => this._syncLogs()}"
+                title="Synchronize activity logs with lock via BLE"
+              >
+                <ha-icon icon="${this._isSyncing ? 'mdi:loading' : 'mdi:sync'}"></ha-icon>
+                <span>${this._isSyncing ? 'Syncing with Lock...' : 'Sync Activity'}</span>
+              </button>
+            </div>
+
             ${unlockHistory.length === 0
-              ? html`<div class="empty-history">No unlock activity recorded yet. Sync with lock via BLE or Cloud.</div>`
+              ? html`<div class="empty-history">No unlock activity recorded yet. Sync with lock via Bluetooth.</div>`
               : html`
                   <div class="history-list">
                     ${unlockHistory.map((item) => {
@@ -783,7 +835,8 @@ export class AtombergLockCard extends LitElement {
     stateObj: any,
     batteryNum: number | null,
     historyCount: number,
-    friendlyName: string
+    friendlyName: string,
+    isCloudConnected: boolean = false
   ): TemplateResult {
     const isLocked = stateObj.state === 'locked';
     const isUnlocking = stateObj.state === 'unlocking';
@@ -840,14 +893,18 @@ export class AtombergLockCard extends LitElement {
         <!-- Compact Footer: Symmetrical 3-element row matching sibling cards -->
         <div class="compact-footer">
           <button
-            class="compact-action-btn ${this._isGenerating ? 'generating' : ''}"
-            title="Generate PIN"
+            class="compact-action-btn ${isCloudConnected ? (this._isGenerating ? 'generating' : '') : (this._isSyncing ? 'syncing' : '')}"
+            title="${isCloudConnected ? 'Generate PIN' : 'Sync Activity'}"
             @click="${(e: Event) => {
               e.stopPropagation();
-              this._generateOtp();
+              if (isCloudConnected) {
+                this._generateOtp();
+              } else {
+                this._syncLogs();
+              }
             }}"
           >
-            <ha-icon icon="${this._isGenerating ? 'mdi:loading' : 'mdi:key-outline'}"></ha-icon>
+            <ha-icon icon="${isCloudConnected ? (this._isGenerating ? 'mdi:loading' : 'mdi:key-outline') : (this._isSyncing ? 'mdi:loading' : 'mdi:sync')}"></ha-icon>
           </button>
 
           <div class="compact-telemetry">
@@ -996,10 +1053,11 @@ export class AtombergLockCard extends LitElement {
     ) as any[];
 
     const totalLogsCount = unlockHistory.length > 0 ? unlockHistory.length : allHistory.length;
+    const isCloudConnected = Boolean(stateObj.attributes?.is_cloud_connected);
 
     // Compact mode check
     if (this._isCompact() && !this._expanded) {
-      return this._renderCompact(stateObj, batteryNum, totalLogsCount, friendlyName);
+      return this._renderCompact(stateObj, batteryNum, totalLogsCount, friendlyName, isCloudConnected);
     }
 
     const isGoogleHome = this._config.full_layout === 'google_home';
@@ -1012,7 +1070,7 @@ export class AtombergLockCard extends LitElement {
     return html`
       <ha-card class="${cardClasses}" style="${cardStyle}">
         ${this._currentView === 'history'
-          ? this._renderHistoryView(activeOtps, allHistory, unlockHistory)
+          ? this._renderHistoryView(activeOtps, allHistory, unlockHistory, isCloudConnected)
           : this._renderMainView(
               stateObj,
               batteryNum,
@@ -1020,7 +1078,8 @@ export class AtombergLockCard extends LitElement {
               totalLogsCount,
               lastUserState,
               lastEventState,
-              friendlyName
+              friendlyName,
+              isCloudConnected
             )}
 
         <!-- Toast Notification Feedback -->

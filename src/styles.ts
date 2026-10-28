@@ -655,6 +655,48 @@ export const cardStyles = css`
     box-shadow: 0 2px 8px color-mix(in srgb, var(--card-accent) 30%, transparent);
   }
 
+  /* History Action Row & Sync Button */
+  .history-actions-row {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 10px;
+  }
+
+  .sync-history-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 10px;
+    background: var(--card-surface);
+    border: 1px solid var(--card-border);
+    color: var(--card-text);
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  ha-card.google-home .sync-history-btn {
+    border-radius: 9999px;
+  }
+
+  .sync-history-btn:hover {
+    background: var(--card-surface-hover);
+    border-color: var(--card-accent);
+  }
+
+  .sync-history-btn.syncing ha-icon,
+  .compact-action-btn.syncing ha-icon {
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+
   /* Physical Unlock Event Card */
   .unlock-event-card {
     padding: 12px 14px;
