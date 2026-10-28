@@ -50,8 +50,12 @@ export class AtombergLockCard extends LitElement {
     return cardStyles;
   }
 
+  private _isCompact(): boolean {
+    return (this._config?.layout || this._config?.card_layout) === 'compact';
+  }
+
   public getCardSize(): number {
-    return this._config?.card_layout === 'compact' && !this._expanded ? 2 : 5;
+    return this._isCompact() && !this._expanded ? 2 : 5;
   }
 
   static getConfigForm() {
@@ -76,7 +80,7 @@ export class AtombergLockCard extends LitElement {
           },
         },
         {
-          name: 'card_layout',
+          name: 'layout',
           label: 'Card Layout',
           selector: {
             select: {
@@ -255,28 +259,120 @@ export class AtombergLockCard extends LitElement {
     }
   }
 
-  private _copyToClipboard(text: string): void {
-    if (!text) return;
-    navigator.clipboard.writeText(text).then(
-      () => this._triggerToast('PIN copied to clipboard!'),
-      () => this._triggerToast('Failed to copy PIN')
-    );
+  private _fallbackCopy(text: string): void {
+    try {
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      textArea.setAttribute('readonly', '');
+      textArea.style.position = 'fixed';
+      textArea.style.opacity = '0';
+      textArea.style.left = '-9999px';
+      textArea.style.top = '-9999px';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      textArea.setSelectionRange(0, text.length);
+      const successful = document.execCommand('copy');
+      document.body.removeChild(textArea);
+      if (successful) {
+        this._triggerToast('PIN copied to clipboard!');
+      } else {
+        this._triggerToast('Failed to copy PIN');
+      }
+    } catch {
+      this._triggerToast('Failed to copy PIN');
+    }
   }
 
-  private _shareOtp(otp: string, expiresAt: string): void {
-    if (!otp) return;
-    const msg = `Your guest access PIN for Atomberg Smart Lock is ${otp} followed by #. Valid until ${expiresAt}.`;
-
-    if (navigator.share) {
-      navigator.share({
-        title: 'Atomberg Smart Lock Guest PIN',
-        text: msg,
-      }).catch(() => {
-        this._copyToClipboard(msg);
-      });
+  private _copyToClipboard(text: string): void {
+    if (!text) return;
+    if (typeof navigator !== 'undefined' && navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+      navigator.clipboard.writeText(text)
+        .then(() => this._triggerToast('PIN copied to clipboard!'))
+        .catch(() => this._fallbackCopy(text));
     } else {
-      this._copyToClipboard(msg);
+      this._fallbackCopy(text);
     }
+  }
+
+  private _formatFriendlyExpiry(timeVal?: string | number): string {
+    if (!timeVal) return 'Boundary Expiry';
+    const date = typeof timeVal === 'number'
+      ? new Date(timeVal * (timeVal < 1e11 ? 1000 : 1))
+      : new Date(timeVal);
+    if (isNaN(date.getTime())) return String(timeVal);
+
+    const now = new Date();
+    const isToday = date.toDateString() === now.toDateString();
+    const timeStr = date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+
+    const diffMs = date.getTime() - now.getTime();
+    const diffMins = Math.round(diffMs / 60000);
+
+    if (diffMins > 0 && diffMins <= 1440) {
+      if (diffMins < 60) {
+        return `${timeStr} (in ${diffMins}m)`;
+      }
+      const hrs = Math.floor(diffMins / 60);
+      const remM = diffMins % 60;
+      const remStr = remM > 0 ? `${hrs}h ${remM}m` : `${hrs}h`;
+      return `${timeStr} (in ${remStr})`;
+    }
+
+    if (diffMins <= 0) {
+      return `${timeStr} (Expired)`;
+    }
+
+    if (isToday) {
+      return `Today at ${timeStr}`;
+    }
+
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    if (date.toDateString() === tomorrow.toDateString()) {
+      return `Tomorrow at ${timeStr}`;
+    }
+
+    return `${date.toLocaleDateString([], { month: 'short', day: 'numeric' })}, ${timeStr}`;
+  }
+
+  private _formatFriendlyCreated(timeVal?: string | number): string {
+    if (!timeVal) return '';
+    const date = typeof timeVal === 'number'
+      ? new Date(timeVal * (timeVal < 1e11 ? 1000 : 1))
+      : new Date(timeVal);
+    if (isNaN(date.getTime())) return String(timeVal);
+
+    const now = new Date();
+    const isToday = date.toDateString() === now.toDateString();
+    const timeStr = date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+
+    if (isToday) {
+      return `Today at ${timeStr}`;
+    }
+    return `${date.toLocaleDateString([], { month: 'short', day: 'numeric' })}, ${timeStr}`;
+  }
+
+  private async _shareOtp(otp: string, expiresAt: string | number): Promise<void> {
+    if (!otp) return;
+    const friendlyExpiry = this._formatFriendlyExpiry(expiresAt);
+    const msg = `Your guest access PIN for Atomberg Smart Lock is ${otp} followed by #. Valid until ${friendlyExpiry}.`;
+
+    if (typeof navigator !== 'undefined' && navigator.share && typeof navigator.share === 'function') {
+      try {
+        await navigator.share({
+          title: 'Atomberg Smart Lock Guest PIN',
+          text: msg,
+        });
+        return;
+      } catch (err: any) {
+        if (err && err.name === 'AbortError') return;
+      }
+    }
+
+    // Fallback on desktop and WebViews without share dialog: copy formatted invitation text
+    this._copyToClipboard(msg);
+    this._triggerToast('Invitation text copied to clipboard!');
   }
 
   private _renderMainView(
@@ -318,7 +414,7 @@ export class AtombergLockCard extends LitElement {
             <ha-icon icon="mdi:history"></ha-icon>
             <span>Logs (${historyCount})</span>
           </div>
-          ${this._config.card_layout === 'compact'
+          ${this._isCompact()
             ? html`
                 <button
                   class="collapse-btn"
@@ -401,14 +497,14 @@ export class AtombergLockCard extends LitElement {
                 ${currentOtp.otp.slice(0, 4)}  ${currentOtp.otp.slice(4)}
               </div>
               <div class="otp-meta">
-                Valid until: <strong>${currentOtp.expires_at || 'Boundary Expiry'}</strong>
+                Valid until: <strong>${this._formatFriendlyExpiry(currentOtp.valid_until_timestamp || currentOtp.expires_at)}</strong>
               </div>
               <div class="otp-actions">
                 <div class="otp-action-btn" @click="${() => this._copyToClipboard(currentOtp.otp)}">
                   <ha-icon icon="mdi:content-copy"></ha-icon>
                   <span>Copy PIN</span>
                 </div>
-                <div class="otp-action-btn" @click="${() => this._shareOtp(currentOtp.otp, currentOtp.expires_at)}">
+                <div class="otp-action-btn" @click="${() => this._shareOtp(currentOtp.otp, currentOtp.valid_until_timestamp || currentOtp.expires_at)}">
                   <ha-icon icon="mdi:share-variant"></ha-icon>
                   <span>Share PIN</span>
                 </div>
@@ -484,15 +580,15 @@ export class AtombergLockCard extends LitElement {
                       </div>
                     </div>
                     <div class="history-card-details">
-                      <div>Expires: ${item.expires_at} (${item.duration_hours}h)</div>
-                      ${item.created_at ? html`<div>Created: ${item.created_at}</div>` : ''}
+                      <div>Expires: ${this._formatFriendlyExpiry(item.valid_until_timestamp || item.expires_at)} (${item.duration_hours}h)</div>
+                      ${item.created_at || item.created_timestamp ? html`<div>Created: ${this._formatFriendlyCreated(item.created_timestamp || item.created_at)}</div>` : ''}
                     </div>
                     <div class="history-card-actions">
                       <div class="history-action-btn" @click="${() => this._copyToClipboard(item.otp)}">
                         <ha-icon icon="mdi:content-copy"></ha-icon>
                         <span>Copy PIN</span>
                       </div>
-                      <div class="history-action-btn" @click="${() => this._shareOtp(item.otp, item.expires_at)}">
+                      <div class="history-action-btn" @click="${() => this._shareOtp(item.otp, item.valid_until_timestamp || item.expires_at)}">
                         <ha-icon icon="mdi:share-variant"></ha-icon>
                         <span>Share</span>
                       </div>
@@ -646,7 +742,7 @@ export class AtombergLockCard extends LitElement {
     const friendlyName = this._config.name || stateObj.attributes.friendly_name || 'Atomberg Smart Lock';
 
     // Compact mode check
-    if (this._config.card_layout === 'compact' && !this._expanded) {
+    if (this._isCompact() && !this._expanded) {
       return this._renderCompact(stateObj, batteryNum, allHistory.length, friendlyName);
     }
 

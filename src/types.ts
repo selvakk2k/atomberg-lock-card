@@ -3,6 +3,7 @@ export interface AtombergLockCardConfig {
   entity?: string;
   name?: string;
   theme?: string;
+  layout?: 'default' | 'compact';
   card_layout?: 'default' | 'compact';
   accent_color?: string;
   default_duration?: number;
