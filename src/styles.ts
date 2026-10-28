@@ -5,7 +5,7 @@ export const cardStyles = css`
     display: block;
     --card-accent: var(--atomberg-accent, var(--primary-color, #f5a623));
     --card-accent-rgb: 245, 166, 35;
-    --card-on-accent: #ffffff;
+    --card-on-accent: #121212;
     --card-bg: var(--ha-card-background, var(--card-background-color, #1e1e24));
     --card-surface: color-mix(in srgb, var(--card-bg) 92%, var(--primary-text-color, #ffffff));
     --card-surface-hover: color-mix(in srgb, var(--card-bg) 84%, var(--primary-text-color, #ffffff));
@@ -45,13 +45,6 @@ export const cardStyles = css`
     min-width: 0;
   }
 
-  .brand-logo {
-    height: 28px;
-    width: auto;
-    max-width: 130px;
-    object-fit: contain;
-  }
-
   .device-title {
     font-size: 1.15rem;
     font-weight: 600;
@@ -86,6 +79,30 @@ export const cardStyles = css`
   .battery-low {
     color: #f44336;
     border-color: #f44336;
+  }
+
+  .history-nav-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 12px;
+    background: var(--card-surface);
+    border: 1px solid var(--card-border);
+    cursor: pointer;
+    color: var(--card-text);
+    transition: all 0.2s ease;
+  }
+
+  .history-nav-btn:hover {
+    background: var(--card-surface-hover);
+    border-color: var(--card-accent);
+  }
+
+  .history-nav-btn ha-icon {
+    --mdc-icon-size: 16px;
   }
 
   /* Hero Section */
@@ -209,21 +226,23 @@ export const cardStyles = css`
 
   .pill-chip.selected {
     background: var(--card-accent);
-    color: var(--card-on-accent);
+    color: #121212;
+    font-weight: 700;
     border-color: var(--card-accent);
     box-shadow: 0 2px 10px color-mix(in srgb, var(--card-accent) 40%, transparent);
   }
 
-  /* Action Buttons */
+  /* High-Contrast Generate Button */
   .btn-generate {
     width: 100%;
     padding: 12px 16px;
     border-radius: 14px;
     border: none;
     background: var(--card-accent);
-    color: var(--card-on-accent);
+    color: #121212;
     font-size: 0.95rem;
     font-weight: 700;
+    letter-spacing: 0.3px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -231,6 +250,11 @@ export const cardStyles = css`
     cursor: pointer;
     transition: all 0.2s ease;
     box-shadow: 0 4px 14px color-mix(in srgb, var(--card-accent) 35%, transparent);
+  }
+
+  .btn-generate ha-icon {
+    --mdc-icon-size: 20px;
+    color: #121212;
   }
 
   .btn-generate:hover {
@@ -308,44 +332,183 @@ export const cardStyles = css`
     --mdc-icon-size: 16px;
   }
 
-  /* Active OTP List */
-  .otp-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-top: 10px;
-  }
-
-  .otp-item {
+  /* History Page Styles */
+  .history-page-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 10px 14px;
-    border-radius: 12px;
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--card-border);
+  }
+
+  .back-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--card-text);
     background: var(--card-surface);
+    border: 1px solid var(--card-border);
+    border-radius: 10px;
+    padding: 6px 12px;
+    transition: all 0.2s ease;
+  }
+
+  .back-btn:hover {
+    background: var(--card-surface-hover);
+    border-color: var(--card-accent);
+  }
+
+  .back-btn ha-icon {
+    --mdc-icon-size: 18px;
+  }
+
+  .history-title {
+    font-size: 1rem;
+    font-weight: 700;
+  }
+
+  .history-count-badge {
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 10px;
+    background: var(--card-surface);
+    color: var(--card-text-muted);
     border: 1px solid var(--card-border);
   }
 
-  .otp-item-code {
-    font-family: monospace;
-    font-size: 1.05rem;
-    font-weight: 700;
-    letter-spacing: 2px;
+  .filter-group {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 12px;
   }
 
-  .otp-item-meta {
-    font-size: 0.75rem;
-    color: var(--card-text-muted);
-  }
-
-  .otp-copy-icon {
+  .filter-chip {
+    padding: 6px 12px;
+    border-radius: 10px;
+    font-size: 0.78rem;
+    font-weight: 600;
     cursor: pointer;
-    color: var(--card-text-muted);
-    transition: color 0.2s;
+    background: var(--card-surface);
+    border: 1px solid var(--card-border);
+    color: var(--card-text);
+    transition: all 0.2s ease;
   }
 
-  .otp-copy-icon:hover {
-    color: var(--card-accent);
+  .filter-chip.selected {
+    background: var(--card-accent);
+    color: #121212;
+    border-color: var(--card-accent);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--card-accent) 30%, transparent);
+  }
+
+  .history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 420px;
+    overflow-y: auto;
+    padding-right: 2px;
+  }
+
+  .history-item-card {
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: var(--card-surface);
+    border: 1px solid var(--card-border);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    transition: border-color 0.2s;
+  }
+
+  .history-item-card.is-active {
+    border-color: color-mix(in srgb, var(--card-success) 40%, var(--card-border));
+    background: color-mix(in srgb, var(--card-success) 8%, var(--card-surface));
+  }
+
+  .history-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .history-card-pin {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 1.3rem;
+    font-weight: 800;
+    letter-spacing: 3px;
+    color: var(--card-text);
+  }
+
+  .status-tag {
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .status-tag.active {
+    color: var(--card-success);
+    background: color-mix(in srgb, var(--card-success) 18%, transparent);
+    border: 1px solid color-mix(in srgb, var(--card-success) 40%, transparent);
+  }
+
+  .status-tag.expired {
+    color: var(--card-text-muted);
+    background: rgba(128, 128, 128, 0.12);
+  }
+
+  .history-card-details {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.78rem;
+    color: var(--card-text-muted);
+  }
+
+  .history-card-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 4px;
+  }
+
+  .history-action-btn {
+    flex: 1;
+    padding: 6px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--card-border);
+    background: var(--card-surface);
+    color: var(--card-text);
+    font-size: 0.75rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .history-action-btn:hover {
+    background: var(--card-surface-hover);
+  }
+
+  .history-action-btn ha-icon {
+    --mdc-icon-size: 14px;
+  }
+
+  .empty-history {
+    padding: 32px 16px;
+    text-align: center;
+    color: var(--card-text-muted);
+    font-size: 0.9rem;
   }
 
   /* Footer */
@@ -372,11 +535,6 @@ export const cardStyles = css`
     border-radius: 50%;
     background: var(--card-success);
     box-shadow: 0 0 6px var(--card-success);
-  }
-
-  .status-dot.offline {
-    background: #f44336;
-    box-shadow: 0 0 6px #f44336;
   }
 
   .toast {

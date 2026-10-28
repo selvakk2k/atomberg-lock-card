@@ -42,6 +42,8 @@ export class AtombergLockCard extends LitElement {
   @state() private _latestOtp: ActiveOtpRecord | null = null;
   @state() private _toastMessage: string = '';
   @state() private _showToast: boolean = false;
+  @state() private _currentView: 'main' | 'history' = 'main';
+  @state() private _historyFilter: 'all' | 'active' = 'all';
 
   static get styles() {
     return cardStyles;
@@ -168,13 +170,11 @@ export class AtombergLockCard extends LitElement {
     if (!primary || !this.hass?.states) return '';
     const baseName = primary.replace('lock.', '');
 
-    // 1. Direct prefix match (e.g. sensor.atomberg_sl1_pro_battery)
     for (const kw of fallbackKeywords) {
       const candidate = `sensor.${baseName}_${kw}`;
       if (this.hass.states[candidate]) return candidate;
     }
 
-    // 2. Substring search across sensor states
     const sensorKeys = Object.keys(this.hass.states).filter((e) => e.startsWith('sensor.'));
     for (const kw of fallbackKeywords) {
       const found = sensorKeys.find((k) => k.includes(baseName) && k.includes(kw));
@@ -219,16 +219,17 @@ export class AtombergLockCard extends LitElement {
 
     this._isGenerating = true;
     try {
-      const res: any = await (this.hass as any).callService(
-        'atomberg_lock',
-        'generate_otp',
-        {
+      // Call service with WebSocket API requesting return_response
+      const res: any = await this.hass.callWS({
+        type: 'call_service',
+        domain: 'atomberg_lock',
+        service: 'generate_otp',
+        service_data: {
           entity_id: entityId,
           duration_hours: this._selectedDuration,
         },
-        undefined,
-        true
-      );
+        return_response: true,
+      });
 
       const otpData = res?.response || res?.service_response || res;
       if (otpData && otpData.otp) {
@@ -243,7 +244,7 @@ export class AtombergLockCard extends LitElement {
         this._triggerToast('OTP generated successfully');
       }
     } catch (err: any) {
-      this._triggerToast(`Failed to generate OTP: ${err.message || err}`);
+      this._triggerToast(`Failed: ${err.message || err}`);
     } finally {
       this._isGenerating = false;
     }
@@ -273,6 +274,221 @@ export class AtombergLockCard extends LitElement {
     }
   }
 
+  private _renderMainView(
+    stateObj: any,
+    batteryNum: number | null,
+    currentOtp: ActiveOtpRecord | null,
+    historyCount: number,
+    lastUserState: string | null,
+    lastEventState: string | null,
+    friendlyName: string
+  ): TemplateResult {
+    const isLocked = stateObj.state === 'locked';
+    const isUnlocking = stateObj.state === 'unlocking';
+    const isLocking = stateObj.state === 'locking';
+
+    return html`
+      <!-- Header -->
+      <div class="card-header">
+        <div class="header-left">
+          <div>
+            <div class="device-title">${friendlyName}</div>
+            <div class="device-subtitle">${stateObj.state.toUpperCase()} • Bluetooth BLE</div>
+          </div>
+        </div>
+        <div class="header-right">
+          ${batteryNum !== null
+            ? html`
+                <div class="battery-badge ${batteryNum <= 20 ? 'battery-low' : ''}">
+                  <ha-icon icon="${batteryNum <= 20 ? 'mdi:battery-alert' : 'mdi:battery'}"></ha-icon>
+                  <span>${batteryNum}%</span>
+                </div>
+              `
+            : ''}
+          <div
+            class="history-nav-btn"
+            @click="${() => (this._currentView = 'history')}"
+            title="View OTP History & Audit Log"
+          >
+            <ha-icon icon="mdi:history"></ha-icon>
+            <span>Logs (${historyCount})</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hero Lock Dial -->
+      <div class="hero-container">
+        <div
+          class="lock-dial ${isLocked ? 'locked' : 'unlocked'}"
+          @click="${this._toggleLock}"
+          title="${isLocked ? 'Click to Unlock' : 'Click to Lock'}"
+        >
+          <ha-icon
+            icon="${isLocked
+              ? 'mdi:lock'
+              : isUnlocking
+              ? 'mdi:lock-clock'
+              : isLocking
+              ? 'mdi:lock-reset'
+              : 'mdi:lock-open-variant'}"
+            style="color: ${isLocked ? 'var(--card-locked)' : 'var(--card-unlocked)'};"
+          ></ha-icon>
+        </div>
+        <div class="dial-status-label" style="color: ${isLocked ? 'var(--card-locked)' : 'var(--card-unlocked)'};">
+          ${isUnlocking ? 'Unlocking...' : isLocking ? 'Locking...' : isLocked ? 'Locked' : 'Unlocked'}
+        </div>
+        <div class="dial-subtext">
+          ${isLocked ? 'Tap dial to unlock' : 'Tap dial to lock'}
+        </div>
+      </div>
+
+      <div class="section-divider"></div>
+
+      <!-- Guest OTP Generator Section -->
+      <div class="section-title">
+        <ha-icon icon="mdi:shield-key-outline"></ha-icon>
+        <span>Offline Guest OTP Generator</span>
+      </div>
+
+      <!-- Duration Segmented Chips -->
+      <div class="pill-group">
+        ${DURATION_OPTIONS.map(
+          (opt) => html`
+            <div
+              class="pill-chip ${this._selectedDuration === opt.value ? 'selected' : ''}"
+              @click="${() => (this._selectedDuration = opt.value)}"
+              title="${opt.desc}"
+            >
+              ${opt.label}
+            </div>
+          `
+        )}
+      </div>
+
+      <button
+        class="btn-generate"
+        @click="${this._generateOtp}"
+        ?disabled="${this._isGenerating}"
+      >
+        <ha-icon icon="${this._isGenerating ? 'mdi:loading' : 'mdi:numeric'}"></ha-icon>
+        <span>${this._isGenerating ? 'Calculating PIN...' : 'Generate Keypad PIN'}</span>
+      </button>
+
+      <!-- Current / Generated OTP Hero Display -->
+      ${currentOtp
+        ? html`
+            <div class="otp-hero-box">
+              <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: var(--card-accent);">
+                Active Keypad PIN (${currentOtp.duration_hours}h)
+              </div>
+              <div class="otp-digits" @click="${() => this._copyToClipboard(currentOtp.otp)}">
+                ${currentOtp.otp.slice(0, 4)}  ${currentOtp.otp.slice(4)}
+              </div>
+              <div class="otp-meta">
+                Valid until: <strong>${currentOtp.expires_at || 'Boundary Expiry'}</strong>
+              </div>
+              <div class="otp-actions">
+                <div class="otp-action-btn" @click="${() => this._copyToClipboard(currentOtp.otp)}">
+                  <ha-icon icon="mdi:content-copy"></ha-icon>
+                  <span>Copy PIN</span>
+                </div>
+                <div class="otp-action-btn" @click="${() => this._shareOtp(currentOtp.otp, currentOtp.expires_at)}">
+                  <ha-icon icon="mdi:share-variant"></ha-icon>
+                  <span>Share PIN</span>
+                </div>
+              </div>
+            </div>
+          `
+        : ''}
+
+      <!-- Footer -->
+      <div class="card-footer">
+        <div class="footer-status">
+          <div class="status-dot"></div>
+          <span>BLE Proxy Active</span>
+        </div>
+        <div>
+          ${lastUserState || lastEventState
+            ? html`<span>Last: ${lastUserState || lastEventState}</span>`
+            : html`<span>SL1 Pro</span>`}
+        </div>
+      </div>
+    `;
+  }
+
+  private _renderHistoryView(
+    activeOtps: ActiveOtpRecord[],
+    allHistory: ActiveOtpRecord[]
+  ): TemplateResult {
+    const nowTs = Math.floor(Date.now() / 1000);
+    const displayedOtps = this._historyFilter === 'active' ? activeOtps : allHistory;
+
+    return html`
+      <!-- History Page Header -->
+      <div class="history-page-header">
+        <div class="back-btn" @click="${() => (this._currentView = 'main')}">
+          <ha-icon icon="mdi:arrow-left"></ha-icon>
+          <span>Back</span>
+        </div>
+        <div class="history-title">OTP Audit Log</div>
+        <div class="history-count-badge">${displayedOtps.length} Records</div>
+      </div>
+
+      <!-- Filter Segmented Tabs -->
+      <div class="filter-group">
+        <div
+          class="filter-chip ${this._historyFilter === 'all' ? 'selected' : ''}"
+          @click="${() => (this._historyFilter = 'all')}"
+        >
+          All (${allHistory.length})
+        </div>
+        <div
+          class="filter-chip ${this._historyFilter === 'active' ? 'selected' : ''}"
+          @click="${() => (this._historyFilter = 'active')}"
+        >
+          Active (${activeOtps.length})
+        </div>
+      </div>
+
+      <!-- History List -->
+      ${displayedOtps.length === 0
+        ? html`<div class="empty-history">No OTP records found in this view.</div>`
+        : html`
+            <div class="history-list">
+              ${displayedOtps.map((item) => {
+                const isActive = item.valid_until_timestamp > nowTs;
+                return html`
+                  <div class="history-item-card ${isActive ? 'is-active' : ''}">
+                    <div class="history-card-top">
+                      <div class="history-card-pin">
+                        ${item.otp.slice(0, 4)} ${item.otp.slice(4)}
+                      </div>
+                      <div class="status-tag ${isActive ? 'active' : 'expired'}">
+                        ${isActive ? 'Active' : 'Expired'}
+                      </div>
+                    </div>
+                    <div class="history-card-details">
+                      <div>Expires: ${item.expires_at} (${item.duration_hours}h)</div>
+                      ${item.created_at ? html`<div>Created: ${item.created_at}</div>` : ''}
+                    </div>
+                    <div class="history-card-actions">
+                      <div class="history-action-btn" @click="${() => this._copyToClipboard(item.otp)}">
+                        <ha-icon icon="mdi:content-copy"></ha-icon>
+                        <span>Copy PIN</span>
+                      </div>
+                      <div class="history-action-btn" @click="${() => this._shareOtp(item.otp, item.expires_at)}">
+                        <ha-icon icon="mdi:share-variant"></ha-icon>
+                        <span>Share</span>
+                      </div>
+                    </div>
+                  </div>
+                `;
+              })}
+            </div>
+          `}
+    `;
+  }
+
   protected render(): TemplateResult {
     const entityId = this._getEntityId();
     const stateObj = this.hass?.states[entityId];
@@ -288,10 +504,6 @@ export class AtombergLockCard extends LitElement {
       `;
     }
 
-    const isLocked = stateObj.state === 'locked';
-    const isUnlocking = stateObj.state === 'unlocking';
-    const isLocking = stateObj.state === 'locking';
-
     // Battery lookup
     const batteryId = this._config.battery_sensor || this._getSecondaryEntityId('battery', ['battery']);
     const batteryState = batteryId && this.hass.states[batteryId] ? this.hass.states[batteryId].state : null;
@@ -301,10 +513,17 @@ export class AtombergLockCard extends LitElement {
     const otpSensorId = this._config.otp_sensor || this._getSecondaryEntityId('otp', ['last_generated_otp', 'last_otp']);
     const otpSensor = otpSensorId ? this.hass.states[otpSensorId] : null;
 
-    // Active OTPs list
+    // Active & Full OTP History
     let activeOtps: ActiveOtpRecord[] = [];
     if (otpSensor?.attributes?.active_otps && Array.isArray(otpSensor.attributes.active_otps)) {
       activeOtps = otpSensor.attributes.active_otps;
+    }
+
+    let allHistory: ActiveOtpRecord[] = [];
+    if (otpSensor?.attributes?.otp_history && Array.isArray(otpSensor.attributes.otp_history)) {
+      allHistory = otpSensor.attributes.otp_history;
+    } else if (activeOtps.length > 0) {
+      allHistory = activeOtps;
     }
 
     // Latest OTP display (either from local state or sensor)
@@ -321,152 +540,17 @@ export class AtombergLockCard extends LitElement {
 
     return html`
       <ha-card style="${this._config.accent_color ? `--card-accent: ${this._config.accent_color};` : ''}">
-        <!-- Header -->
-        <div class="card-header">
-          <div class="header-left">
-            <div>
-              <div class="device-title">${friendlyName}</div>
-              <div class="device-subtitle">${stateObj.state.toUpperCase()} • Bluetooth BLE</div>
-            </div>
-          </div>
-          <div class="header-right">
-            ${batteryNum !== null
-              ? html`
-                  <div class="battery-badge ${batteryNum <= 20 ? 'battery-low' : ''}">
-                    <ha-icon icon="${batteryNum <= 20 ? 'mdi:battery-alert' : 'mdi:battery'}"></ha-icon>
-                    <span>${batteryNum}%</span>
-                  </div>
-                `
-              : ''}
-          </div>
-        </div>
-
-        <!-- Hero Lock Dial -->
-        <div class="hero-container">
-          <div
-            class="lock-dial ${isLocked ? 'locked' : 'unlocked'}"
-            @click="${this._toggleLock}"
-            title="${isLocked ? 'Click to Unlock' : 'Click to Lock'}"
-          >
-            <ha-icon
-              icon="${isLocked
-                ? 'mdi:lock'
-                : isUnlocking
-                ? 'mdi:lock-clock'
-                : isLocking
-                ? 'mdi:lock-reset'
-                : 'mdi:lock-open-variant'}"
-              style="color: ${isLocked ? 'var(--card-locked)' : 'var(--card-unlocked)'};"
-            ></ha-icon>
-          </div>
-          <div class="dial-status-label" style="color: ${isLocked ? 'var(--card-locked)' : 'var(--card-unlocked)'};">
-            ${isUnlocking ? 'Unlocking...' : isLocking ? 'Locking...' : isLocked ? 'Locked' : 'Unlocked'}
-          </div>
-          <div class="dial-subtext">
-            ${isLocked ? 'Tap dial to unlock' : 'Tap dial to lock'}
-          </div>
-        </div>
-
-        <div class="section-divider"></div>
-
-        <!-- Guest OTP Generator Section -->
-        <div class="section-title">
-          <ha-icon icon="mdi:shield-key-outline"></ha-icon>
-          <span>Offline Guest OTP Generator</span>
-        </div>
-
-        <!-- Duration Segmented Chips -->
-        <div class="pill-group">
-          ${DURATION_OPTIONS.map(
-            (opt) => html`
-              <div
-                class="pill-chip ${this._selectedDuration === opt.value ? 'selected' : ''}"
-                @click="${() => (this._selectedDuration = opt.value)}"
-                title="${opt.desc}"
-              >
-                ${opt.label}
-              </div>
-            `
-          )}
-        </div>
-
-        <button
-          class="btn-generate"
-          @click="${this._generateOtp}"
-          ?disabled="${this._isGenerating}"
-        >
-          <ha-icon icon="${this._isGenerating ? 'mdi:loading' : 'mdi:numeric'}"></ha-icon>
-          <span>${this._isGenerating ? 'Calculating PIN...' : 'Generate Keypad PIN'}</span>
-        </button>
-
-        <!-- Current / Generated OTP Hero Display -->
-        ${currentOtp
-          ? html`
-              <div class="otp-hero-box">
-                <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: var(--card-accent);">
-                  Active Keypad PIN (${currentOtp.duration_hours}h)
-                </div>
-                <div class="otp-digits" @click="${() => this._copyToClipboard(currentOtp.otp)}">
-                  ${currentOtp.otp.slice(0, 4)}  ${currentOtp.otp.slice(4)}
-                </div>
-                <div class="otp-meta">
-                  Valid until: <strong>${currentOtp.expires_at || 'Boundary Expiry'}</strong>
-                </div>
-                <div class="otp-actions">
-                  <div class="otp-action-btn" @click="${() => this._copyToClipboard(currentOtp.otp)}">
-                    <ha-icon icon="mdi:content-copy"></ha-icon>
-                    <span>Copy PIN</span>
-                  </div>
-                  <div class="otp-action-btn" @click="${() => this._shareOtp(currentOtp.otp, currentOtp.expires_at)}">
-                    <ha-icon icon="mdi:share-variant"></ha-icon>
-                    <span>Share PIN</span>
-                  </div>
-                </div>
-              </div>
-            `
-          : ''}
-
-        <!-- Active OTP List -->
-        ${activeOtps.length > 1
-          ? html`
-              <div style="margin-top: 14px;">
-                <div class="section-title" style="font-size: 0.75rem;">
-                  <span>Other Active Guest PINs (${activeOtps.length})</span>
-                </div>
-                <div class="otp-list">
-                  ${activeOtps.map(
-                    (item) => html`
-                      <div class="otp-item">
-                        <div>
-                          <div class="otp-item-code">${item.otp}</div>
-                          <div class="otp-item-meta">Expires: ${item.expires_at} (${item.duration_hours}h)</div>
-                        </div>
-                        <ha-icon
-                          class="otp-copy-icon"
-                          icon="mdi:content-copy"
-                          @click="${() => this._copyToClipboard(item.otp)}"
-                          title="Copy PIN"
-                        ></ha-icon>
-                      </div>
-                    `
-                  )}
-                </div>
-              </div>
-            `
-          : ''}
-
-        <!-- Footer -->
-        <div class="card-footer">
-          <div class="footer-status">
-            <div class="status-dot"></div>
-            <span>BLE Proxy Active</span>
-          </div>
-          <div>
-            ${lastUserState || lastEventState
-              ? html`<span>Last: ${lastUserState || lastEventState}</span>`
-              : html`<span>SL1 Pro</span>`}
-          </div>
-        </div>
+        ${this._currentView === 'history'
+          ? this._renderHistoryView(activeOtps, allHistory)
+          : this._renderMainView(
+              stateObj,
+              batteryNum,
+              currentOtp,
+              allHistory.length,
+              lastUserState,
+              lastEventState,
+              friendlyName
+            )}
 
         <!-- Toast Notification Feedback -->
         <div class="toast ${this._showToast ? 'show' : ''}">${this._toastMessage}</div>
