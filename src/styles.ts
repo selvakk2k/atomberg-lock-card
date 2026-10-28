@@ -49,42 +49,134 @@ export const cardStyles = css`
     font-family: var(--paper-font-body1_-_font-family, inherit);
   }
 
+  /* Google Home Layout Overrides (M3 Pill Shapes & Soft Radii) */
   ha-card.google-home {
     border-radius: 28px;
+  }
+  ha-card.google-home .pill-chip {
+    border-radius: 9999px;
+    padding: 8px 14px;
+  }
+  ha-card.google-home .btn-generate {
+    border-radius: 28px;
+    box-shadow: 0 4px 18px color-mix(in srgb, var(--card-accent) 45%, transparent);
+  }
+  ha-card.google-home .otp-hero-box {
+    border-radius: 24px;
+  }
+  ha-card.google-home .history-tab {
+    border-radius: 9999px;
+  }
+  ha-card.google-home .history-item-card,
+  ha-card.google-home .unlock-event-card {
+    border-radius: 20px;
+  }
+  ha-card.google-home .filter-chip {
+    border-radius: 9999px;
+  }
+
+  /* Classic Layout Overrides (Structured Crisp Segments & Square Radii) */
+  ha-card.classic {
+    border-radius: 16px;
+  }
+  ha-card.classic .pill-chip {
+    border-radius: 8px;
+    padding: 8px 10px;
+  }
+  ha-card.classic .btn-generate {
+    border-radius: 12px;
+  }
+  ha-card.classic .otp-hero-box {
+    border-radius: 12px;
+  }
+  ha-card.classic .history-tab {
+    border-radius: 8px;
+  }
+  ha-card.classic .history-item-card,
+  ha-card.classic .unlock-event-card {
+    border-radius: 12px;
+  }
+  ha-card.classic .filter-chip {
+    border-radius: 8px;
   }
 
   /* Header */
   .card-header {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
     margin-bottom: 16px;
+    gap: 12px;
   }
 
   .header-left {
     display: flex;
-    align-items: center;
-    gap: 12px;
+    flex-direction: column;
+    gap: 4px;
     min-width: 0;
+    flex: 1;
   }
 
   .device-title {
     font-size: 1.15rem;
-    font-weight: 600;
+    font-weight: 700;
+    line-height: 1.25;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    color: var(--card-text);
   }
 
-  .device-subtitle {
+  .device-subtitle-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
     font-size: 0.8rem;
     color: var(--card-text-muted);
+  }
+
+  .status-state {
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+  .status-state.locked {
+    color: var(--card-locked);
+  }
+  .status-state.unlocked {
+    color: var(--card-unlocked);
+  }
+
+  .sep {
+    opacity: 0.4;
+  }
+
+  .telemetry-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-weight: 500;
+  }
+
+  .telemetry-item.history-pill {
+    cursor: pointer;
+    background: var(--card-surface);
+    border: 1px solid var(--card-border);
+    padding: 2px 8px;
+    border-radius: 9999px;
+    font-weight: 600;
+    color: var(--card-text);
+    transition: all 0.2s ease;
+  }
+  .telemetry-item.history-pill:hover {
+    background: var(--card-surface-hover);
+    border-color: var(--card-accent);
   }
 
   .header-right {
     display: flex;
     align-items: center;
-    gap: 8px;
+    flex-shrink: 0;
   }
 
   .battery-badge {
@@ -518,6 +610,150 @@ export const cardStyles = css`
     background: var(--card-surface);
     color: var(--card-text-muted);
     border: 1px solid var(--card-border);
+  }
+
+  /* History Main Tabs (Unlock Activity vs Generated PINs) */
+  .history-main-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+    background: color-mix(in srgb, var(--card-surface) 60%, var(--card-bg));
+    padding: 4px;
+    border-radius: 12px;
+    border: 1px solid var(--card-border);
+  }
+
+  ha-card.google-home .history-main-tabs {
+    border-radius: 9999px;
+  }
+
+  .history-tab {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 12px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    color: var(--card-text-muted);
+    transition: all 0.2s ease;
+    border-radius: 8px;
+    user-select: none;
+  }
+
+  .history-tab:hover {
+    color: var(--card-text);
+    background: var(--card-surface-hover);
+  }
+
+  .history-tab.selected {
+    background: var(--card-accent);
+    color: #121212;
+    font-weight: 700;
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--card-accent) 30%, transparent);
+  }
+
+  /* Physical Unlock Event Card */
+  .unlock-event-card {
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: var(--card-surface);
+    border: 1px solid var(--card-border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: border-color 0.2s, background 0.2s;
+  }
+
+  .unlock-event-card:hover {
+    background: var(--card-surface-hover);
+    border-color: var(--card-accent);
+  }
+
+  .unlock-icon-box {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--card-accent);
+    flex-shrink: 0;
+  }
+
+  ha-card.google-home .unlock-icon-box {
+    border-radius: 50%;
+  }
+
+  .unlock-icon-box ha-icon {
+    --mdc-icon-size: 22px;
+  }
+
+  .unlock-details {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .unlock-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .unlock-user-name {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--card-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .source-badge {
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+  }
+
+  .source-badge.ble {
+    background: color-mix(in srgb, #2196f3 18%, transparent);
+    color: #64b5f6;
+    border: 1px solid color-mix(in srgb, #2196f3 30%, transparent);
+  }
+
+  .source-badge.cloud {
+    background: color-mix(in srgb, var(--card-accent) 18%, transparent);
+    color: var(--card-accent);
+    border: 1px solid color-mix(in srgb, var(--card-accent) 30%, transparent);
+  }
+
+  .unlock-sub-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.78rem;
+    color: var(--card-text-muted);
+  }
+
+  .unlock-type-pill {
+    font-weight: 600;
+    color: var(--card-text);
+  }
+
+  .unlock-time {
+    font-weight: 400;
   }
 
   .filter-group {
