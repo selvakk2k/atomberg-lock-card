@@ -1568,7 +1568,7 @@ const ct={attribute:!0,type:String,converter:f,reflect:!1,hasChanged:x},lt=(t=ct
 
             ${0===r.length?B`<div class="empty-history">No unlock activity recorded yet. Sync with lock via Bluetooth.</div>`:B`
                   <div class="history-list">
-                    ${r.map(t=>{const e=this._getCredentialIcon(t.credential_type),r=this._formatFriendlyCreated(t.timestamp||t.recordTime),o=t.user_name||(void 0!==t.slot_id?`Slot ${t.slot_id}`:"User"),a=t.credential_type||"Unknown",i=(t.source||"ble").toUpperCase();return B`
+                    ${r.map(t=>{const e=this._getCredentialIcon(t.credential_type),r=this._formatFriendlyCreated(t.timestamp||t.datetime||t.recordTime),o=t.user_name||t.detail||(void 0!==t.slot_id?`Slot ${t.slot_id}`:void 0!==t.slot?`Slot ${t.slot}`:"User"),a=t.credential_type||"Unknown",i=(t.source||"ble").toUpperCase();return B`
                         <div class="unlock-event-card">
                           <div class="unlock-icon-box">
                             <ha-icon icon="${e}"></ha-icon>

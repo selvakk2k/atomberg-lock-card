@@ -747,8 +747,8 @@ export class AtombergLockCard extends LitElement {
                   <div class="history-list">
                     ${unlockHistory.map((item) => {
                       const icon = this._getCredentialIcon(item.credential_type);
-                      const timeStr = this._formatFriendlyCreated(item.timestamp || item.recordTime);
-                      const userName = item.user_name || (item.slot_id !== undefined ? `Slot ${item.slot_id}` : 'User');
+                      const timeStr = this._formatFriendlyCreated(item.timestamp || item.datetime || item.recordTime);
+                      const userName = item.user_name || item.detail || (item.slot_id !== undefined ? `Slot ${item.slot_id}` : (item.slot !== undefined ? `Slot ${item.slot}` : 'User'));
                       const credType = item.credential_type || 'Unknown';
                       const source = (item.source || 'ble').toUpperCase();
 
