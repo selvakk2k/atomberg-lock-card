@@ -558,4 +558,178 @@ export const cardStyles = css`
   .toast.show {
     opacity: 1;
   }
+
+  /* ── Collapse Button ── */
+  .collapse-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid var(--card-border);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--card-surface);
+    color: var(--card-text-muted);
+    transition: all 0.2s ease;
+    outline: none;
+  }
+
+  .collapse-btn:hover {
+    background: var(--card-surface-hover);
+    color: var(--card-text);
+  }
+
+  .collapse-btn ha-icon {
+    --mdc-icon-size: 18px;
+  }
+
+  /* ── Compact Card (Expandable) ── */
+  ha-card.compact-card {
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    cursor: pointer;
+    user-select: none;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  ha-card.compact-card:hover {
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.22);
+  }
+
+  .compact-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .compact-icon-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    border: 1px solid var(--card-border);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--card-surface);
+    color: var(--card-text);
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+  }
+
+  .compact-icon-btn.locked {
+    background: color-mix(in srgb, var(--card-accent) 20%, var(--card-surface));
+    color: var(--card-accent);
+    border-color: var(--card-accent);
+    box-shadow: 0 0 12px color-mix(in srgb, var(--card-accent) 30%, transparent);
+  }
+
+  .compact-icon-btn.unlocked {
+    background: color-mix(in srgb, #4caf50 20%, var(--card-surface));
+    color: #4caf50;
+    border-color: #4caf50;
+    box-shadow: 0 0 12px rgba(76, 175, 80, 0.3);
+  }
+
+  .compact-icon-btn.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .compact-title-wrap {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .compact-title {
+    font-size: 1rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--card-text);
+  }
+
+  .compact-subtitle {
+    font-size: 0.75rem;
+    color: var(--card-text-muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 2px;
+  }
+
+  .compact-chevron {
+    color: var(--card-text-muted);
+    opacity: 0.7;
+    --mdc-icon-size: 22px;
+    transition: transform 0.2s ease;
+  }
+
+  .compact-center {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 0 4px;
+  }
+
+  .compact-value {
+    font-size: 1.85rem;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    line-height: 1.1;
+  }
+
+  .compact-value.locked {
+    color: var(--card-accent);
+  }
+
+  .compact-value.unlocked {
+    color: #4caf50;
+  }
+
+  .compact-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--card-border);
+  }
+
+  .compact-action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 12px;
+    border: 1px solid var(--card-border);
+    background: var(--card-surface);
+    color: var(--card-text);
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .compact-action-btn:hover {
+    background: var(--card-surface-hover);
+  }
+
+  .compact-action-btn ha-icon {
+    --mdc-icon-size: 16px;
+  }
+
+  .compact-action-btn.pin-btn {
+    background: var(--card-accent);
+    color: #121212;
+    border-color: var(--card-accent);
+  }
+
+  .compact-action-btn.pin-btn:hover {
+    filter: brightness(1.08);
+  }
 `;

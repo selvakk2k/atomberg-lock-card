@@ -44,9 +44,14 @@ export class AtombergLockCard extends LitElement {
   @state() private _showToast: boolean = false;
   @state() private _currentView: 'main' | 'history' = 'main';
   @state() private _historyFilter: 'all' | 'active' = 'all';
+  @state() private _expanded: boolean = false;
 
   static get styles() {
     return cardStyles;
+  }
+
+  public getCardSize(): number {
+    return this._config?.card_layout === 'compact' && !this._expanded ? 2 : 5;
   }
 
   static getConfigForm() {
@@ -77,7 +82,7 @@ export class AtombergLockCard extends LitElement {
             select: {
               options: [
                 { label: 'Default (Full)', value: 'default' },
-                { label: 'Compact', value: 'compact' },
+                { label: 'Compact (Expandable)', value: 'compact' },
               ],
             },
           },
@@ -313,6 +318,17 @@ export class AtombergLockCard extends LitElement {
             <ha-icon icon="mdi:history"></ha-icon>
             <span>Logs (${historyCount})</span>
           </div>
+          ${this._config.card_layout === 'compact'
+            ? html`
+                <button
+                  class="collapse-btn"
+                  title="Collapse Card"
+                  @click="${() => (this._expanded = false)}"
+                >
+                  <ha-icon icon="mdi:chevron-up"></ha-icon>
+                </button>
+              `
+            : ''}
         </div>
       </div>
 
@@ -489,6 +505,97 @@ export class AtombergLockCard extends LitElement {
     `;
   }
 
+  private _renderCompact(
+    stateObj: any,
+    batteryNum: number | null,
+    historyCount: number,
+    friendlyName: string
+  ): TemplateResult {
+    const isLocked = stateObj.state === 'locked';
+    const isUnlocking = stateObj.state === 'unlocking';
+    const isLocking = stateObj.state === 'locking';
+    const isUnavailable = stateObj.state === 'unavailable' || stateObj.state === 'unknown';
+
+    const statusText = isUnavailable
+      ? 'Unavailable'
+      : isUnlocking
+      ? 'Unlocking...'
+      : isLocking
+      ? 'Locking...'
+      : isLocked
+      ? 'Locked'
+      : 'Unlocked';
+
+    return html`
+      <ha-card
+        class="compact-card"
+        style="${this._config.accent_color ? `--card-accent: ${this._config.accent_color};` : ''}"
+        @click="${() => (this._expanded = true)}"
+      >
+        <!-- Compact Header -->
+        <div class="compact-header">
+          <button
+            class="compact-icon-btn ${isLocked ? 'locked' : 'unlocked'} ${isUnavailable ? 'disabled' : ''}"
+            title="${isLocked ? 'Unlock Door' : 'Lock Door'}"
+            @click="${(e: Event) => {
+              e.stopPropagation();
+              this._toggleLock();
+            }}"
+          >
+            <ha-icon icon="${isLocked ? 'mdi:lock' : 'mdi:lock-open-variant'}"></ha-icon>
+          </button>
+          <div class="compact-title-wrap">
+            <div class="compact-title">${friendlyName}</div>
+            <div class="compact-subtitle">
+              ${batteryNum !== null
+                ? html`<ha-icon icon="mdi:battery" style="--mdc-icon-size: 14px;"></ha-icon><span>${batteryNum}%</span> • `
+                : ''}
+              <span>${isUnavailable ? 'Offline' : 'Bluetooth BLE'}</span>
+            </div>
+          </div>
+          <ha-icon class="compact-chevron" icon="mdi:chevron-right"></ha-icon>
+        </div>
+
+        <!-- Compact Hero State -->
+        <div class="compact-center">
+          <div class="compact-value ${isLocked ? 'locked' : 'unlocked'}">${statusText}</div>
+        </div>
+
+        <!-- Compact Footer Actions -->
+        <div class="compact-footer">
+          <button
+            class="compact-action-btn pin-btn"
+            title="Generate Guest Access PIN"
+            @click="${(e: Event) => {
+              e.stopPropagation();
+              this._expanded = true;
+              this._generateOtp();
+            }}"
+          >
+            <ha-icon icon="mdi:key-outline"></ha-icon>
+            <span>Generate PIN</span>
+          </button>
+
+          <button
+            class="compact-action-btn"
+            title="View OTP History & Audit Logs"
+            @click="${(e: Event) => {
+              e.stopPropagation();
+              this._currentView = 'history';
+              this._expanded = true;
+            }}"
+          >
+            <ha-icon icon="mdi:history"></ha-icon>
+            <span>Logs (${historyCount})</span>
+          </button>
+        </div>
+
+        <!-- Toast Notification Feedback -->
+        <div class="toast ${this._showToast ? 'show' : ''}">${this._toastMessage}</div>
+      </ha-card>
+    `;
+  }
+
   protected render(): TemplateResult {
     const entityId = this._getEntityId();
     const stateObj = this.hass?.states[entityId];
@@ -537,6 +644,11 @@ export class AtombergLockCard extends LitElement {
     const lastEventState = lastEventId && this.hass.states[lastEventId] ? this.hass.states[lastEventId].state : null;
 
     const friendlyName = this._config.name || stateObj.attributes.friendly_name || 'Atomberg Smart Lock';
+
+    // Compact mode check
+    if (this._config.card_layout === 'compact' && !this._expanded) {
+      return this._renderCompact(stateObj, batteryNum, allHistory.length, friendlyName);
+    }
 
     return html`
       <ha-card style="${this._config.accent_color ? `--card-accent: ${this._config.accent_color};` : ''}">
