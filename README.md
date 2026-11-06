@@ -2,6 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![HACS: Custom](https://img.shields.io/badge/HACS-Custom%20Card-orange.svg)](https://hacs.xyz)
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=selvakk2k&repository=atomberg-lock-card&category=plugin)
 
 A custom Lovelace card for Atomberg Smart Door Locks (SL1 / SL1 Pro) in Home Assistant. Designed with the [Appliance Lovelace Design System](https://github.com/selvakk2k/ha-atomberg-lock) for seamless Material 3 theming, tactile lock/unlock control, and real-time audit logs.
 
