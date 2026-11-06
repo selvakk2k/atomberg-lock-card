@@ -319,9 +319,20 @@ export class AtombergLockCard extends LitElement {
 
   private _formatFriendlyCreated(timeVal?: string | number): string {
     if (!timeVal) return '';
-    const date = typeof timeVal === 'number'
-      ? new Date(timeVal * (timeVal < 1e11 ? 1000 : 1))
-      : new Date(timeVal);
+    let date: Date;
+    if (typeof timeVal === 'number') {
+      if (timeVal <= 0) return '';
+      date = new Date(timeVal * (timeVal < 1e11 ? 1000 : 1));
+    } else {
+      const str = String(timeVal).trim();
+      if (!str) return '';
+      if (/^\d{9,13}$/.test(str)) {
+        const num = Number(str);
+        date = new Date(num * (num < 1e11 ? 1000 : 1));
+      } else {
+        date = new Date(str);
+      }
+    }
     if (isNaN(date.getTime())) return String(timeVal);
 
     const now = new Date();
@@ -524,7 +535,8 @@ export class AtombergLockCard extends LitElement {
             <div class="history-list">
               ${unlockHistory.map((item) => {
                 const icon = this._getCredentialIcon(item.credential_type);
-                const timeStr = this._formatFriendlyCreated(item.timestamp || item.datetime || item.recordTime);
+                const rawTimeSource = item.raw_timestamp ?? item.timestamp ?? item.datetime ?? item.recordTime ?? item.time;
+                const timeStr = this._formatFriendlyCreated(rawTimeSource);
                 const userName = item.user_name || item.detail || (item.slot_id !== undefined ? `Slot ${item.slot_id}` : (item.slot !== undefined ? `Slot ${item.slot}` : 'User'));
                 const credType = item.credential_type || 'Unknown';
                 const source = (item.source || 'ble').toUpperCase();
@@ -679,16 +691,84 @@ export class AtombergLockCard extends LitElement {
 
     const friendlyName = this._config.name || stateObj.attributes.friendly_name || 'Atomberg Smart Lock';
 
-    // Physical unlock history lookup from local reactive state or coordinator/lock attributes
-    const unlockHistory = (
-      this._localUnlockHistory ||
-      stateObj?.attributes?.unlock_history ||
-      stateObj?.attributes?.access_logs ||
-      stateObj?.attributes?.logs ||
-      (lastEventId && this.hass.states[lastEventId]?.attributes?.unlock_history) ||
-      (lastEventId && this.hass.states[lastEventId]?.attributes?.access_logs) ||
-      []
-    ) as any[];
+    // Physical unlock history lookup: reconcile entity attributes and local sync records
+    const candidateAttributes = [
+      stateObj?.attributes?.unlock_history,
+      stateObj?.attributes?.access_logs,
+      stateObj?.attributes?.logs,
+      lastEventId && this.hass.states[lastEventId]?.attributes?.unlock_history,
+      lastEventId && this.hass.states[lastEventId]?.attributes?.access_logs,
+      lastEventId && this.hass.states[lastEventId]?.attributes?.logs,
+    ];
+    const entityHistoryRaw =
+      candidateAttributes.find((attr) => Array.isArray(attr) && attr.length > 0) ??
+      candidateAttributes.find((attr) => Array.isArray(attr));
+    const entityHistory: any[] = Array.isArray(entityHistoryRaw) ? entityHistoryRaw : [];
+    const localHistory: any[] = Array.isArray(this._localUnlockHistory) ? this._localUnlockHistory : [];
+
+    // Merge and deduplicate: iterate localHistory first so freshly synced details take precedence
+    const recordMap = new Map<string, any>();
+    const getNumericTime = (rec: any): number => {
+      if (!rec || typeof rec !== 'object') return 0;
+      const rawVal = rec.raw_timestamp ?? rec.timestamp ?? rec.datetime ?? rec.recordTime ?? rec.time;
+      if (rawVal !== undefined && rawVal !== null && rawVal !== '') {
+        if (typeof rawVal === 'number') {
+          if (rawVal <= 0) return 0;
+          return rawVal > 1e11 ? rawVal : rawVal * 1000;
+        }
+        const str = String(rawVal).trim();
+        if (/^\d{9,13}$/.test(str)) {
+          const num = Number(str);
+          if (num <= 0) return 0;
+          return num > 1e11 ? num : num * 1000;
+        }
+        const parsed = Date.parse(str);
+        if (!isNaN(parsed) && parsed > 0) return parsed;
+      }
+      return 0;
+    };
+
+    let anonIndex = 0;
+    const buildRecordKey = (rec: any): string => {
+      const id = rec.id || rec.event_id || rec.log_id;
+      if (id) return String(id);
+      const numTime = getNumericTime(rec);
+      const eventVal = rec.event || rec.event_name || rec.type || '';
+      const credVal = rec.credential_type || '';
+      const slotVal = rec.slot !== undefined ? rec.slot : (rec.slot_id !== undefined ? rec.slot_id : '');
+      const userVal = rec.user || rec.user_name || rec.detail || '';
+      // When canonical timestamp exists, normalize to whole seconds so sub-second/millisecond discrepancies merge cleanly
+      if (numTime > 0) {
+        return `evt_${Math.floor(numTime / 1000)}_${eventVal}_${credVal}_${slotVal}_${userVal}`;
+      }
+      const rawTime = rec.raw_timestamp ?? rec.timestamp ?? rec.datetime ?? rec.recordTime ?? rec.time ?? '';
+      if (!rawTime && !eventVal && !credVal && slotVal === '' && !userVal) {
+        return `anon_${++anonIndex}`;
+      }
+      return `raw_${rawTime}_${eventVal}_${credVal}_${slotVal}_${userVal}`;
+    };
+
+    // Add entity history first
+    for (const item of entityHistory) {
+      if (!item || typeof item !== 'object') continue;
+      const key = buildRecordKey(item);
+      recordMap.set(key, item);
+    }
+
+    // Overlay localHistory so fresh sync records update and take precedence for matching events
+    for (const item of localHistory) {
+      if (!item || typeof item !== 'object') continue;
+      const key = buildRecordKey(item);
+      const existing = recordMap.get(key);
+      recordMap.set(key, existing ? { ...existing, ...item } : item);
+    }
+
+    const mergedList = Array.from(recordMap.values());
+
+    // Sort by timestamp descending so the most recent records always appear at the top
+    mergedList.sort((a, b) => getNumericTime(b) - getNumericTime(a));
+
+    const unlockHistory = mergedList;
 
     const totalLogsCount = unlockHistory.length;
 

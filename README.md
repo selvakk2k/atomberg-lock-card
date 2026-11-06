@@ -29,7 +29,7 @@ A custom Lovelace card for Atomberg Smart Door Locks (SL1 / SL1 Pro) in Home Ass
 
 ### Manual Installation via Lovelace Resources
 
-1. Copy [`dist/atomberg-lock-card.js`](file:///d:/GitHub/atomberg-lock-card/dist/atomberg-lock-card.js) to your Home Assistant `config/www/` directory.
+1. Copy [`dist/atomberg-lock-card.js`](dist/atomberg-lock-card.js) to your Home Assistant `config/www/` directory.
 2. In Home Assistant, go to **Settings -> Dashboards -> More Options (top right) -> Resources**.
 3. Click **Add Resource**:
    - **URL**: `/local/atomberg-lock-card.js`
