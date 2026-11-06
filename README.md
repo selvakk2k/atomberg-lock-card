@@ -82,7 +82,13 @@ last_event_sensor: sensor.atomberg_sl1_pro_last_event
 
 ---
 
-## License
+## Credits & License
 
-This project is licensed under the MIT License.
+### Project Contributors & AI Attribution
+* **Lead Architecture & Hardware Validation**: [@selvakk2k](https://github.com/selvakk2k)
+* **Code Implementation & Engineering**: **Antigravity** (Google DeepMind)
+* **Automated Code Review & Auditing**: **CodeRabbit** ([@coderabbitai](https://github.com/coderabbitai))
+* **Pre-Release Code Review & Auditing**: **Claude** (Anthropic)
+
+Licensed under the **MIT License**. See [LICENSE](LICENSE) for details.
 
