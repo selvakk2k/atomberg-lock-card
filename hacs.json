@@ -1,0 +1,9 @@
+{
+  "name": "Atomberg Smart Lock Card",
+  "render_readme": true,
+  "filename": "atomberg-lock-card.js",
+  "content_in_root": false,
+  "country": [
+    "IN"
+  ]
+}

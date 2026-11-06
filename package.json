@@ -1,7 +1,7 @@
 {
   "name": "atomberg-lock-card",
   "version": "1.0.0",
-  "description": "A Lovelace card for Atomberg Smart Locks with offline OTP generator, active PINs, and audit logs",
+  "description": "A Lovelace card for Atomberg Smart Locks with local BLE control, battery monitoring, and activity audit logs",
   "type": "module",
   "main": "dist/atomberg-lock-card.js",
   "scripts": {
