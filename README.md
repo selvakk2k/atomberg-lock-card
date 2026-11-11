@@ -1,8 +1,7 @@
 # Atomberg Smart Lock Card (`atomberg-lock-card`)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![HACS: Custom](https://img.shields.io/badge/HACS-Custom%20Card-orange.svg)](https://hacs.xyz)
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=selvakk2k&repository=atomberg-lock-card&category=plugin)
+[![Marketplace: Custom](https://img.shields.io/badge/Marketplace-Custom%20Card-41BDF5.svg)](https://www.home-assistant.io/integrations/marketplace/)
 
 A custom Lovelace card for Atomberg Smart Door Locks (SL1 / SL1 Pro) in Home Assistant. Designed with the [Appliance Lovelace Design System](https://github.com/selvakk2k/ha-atomberg-lock) for seamless Material 3 theming, tactile lock/unlock control, and real-time audit logs.
 
@@ -28,7 +27,29 @@ A custom Lovelace card for Atomberg Smart Door Locks (SL1 / SL1 Pro) in Home Ass
 
 ## Installation
 
-### Manual Installation via Lovelace Resources
+### Method 1: Via Home Assistant Marketplace (Recommended)
+
+*Requires Home Assistant **2026.11** or newer. (On an older version? Expand the legacy HACS instructions below.)*
+
+[![Open your Home Assistant instance and open a repository in the Marketplace.](https://my.home-assistant.io/badges/marketplace_repository.svg)](https://my.home-assistant.io/redirect/marketplace_repository/?owner=selvakk2k&repository=atomberg-lock-card&category=plugin)
+
+1. Click the **Open Marketplace repository** button above, or go to **Settings** → **Marketplace** in Home Assistant.
+2. In the upper-right corner, select **Add from link**.
+3. Under **GitHub link**, enter `https://github.com/selvakk2k/atomberg-lock-card` (connect your GitHub account if prompted), then select **Add**. *(If prompted for **Type**, select **Dashboard** and select **Add** again.)*
+4. Open **Atomberg Smart Lock Card** from the list, select **Download**, and reload your dashboard.
+
+<details>
+<summary>Home Assistant 2026.10 or older (Legacy HACS)</summary>
+
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=selvakk2k&repository=atomberg-lock-card&category=plugin)
+
+1. Click the **Open repository in HACS** button above, or open **HACS** from your Home Assistant sidebar.
+2. Click the top-right menu (⋮) → **Custom repositories** → Add `https://github.com/selvakk2k/atomberg-lock-card` with category **Dashboard**.
+3. Search for **Atomberg Smart Lock Card**, click **Download**, and reload your dashboard.
+
+</details>
+
+### Method 2: Manual Installation via Lovelace Resources
 
 1. Copy [`dist/atomberg-lock-card.js`](dist/atomberg-lock-card.js) to your Home Assistant `config/www/` directory.
 2. In Home Assistant, go to **Settings -> Dashboards -> More Options (top right) -> Resources**.
