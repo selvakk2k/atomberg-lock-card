@@ -1,7 +1,12 @@
 # Atomberg Smart Lock Card (`atomberg-lock-card`)
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Marketplace: Custom](https://img.shields.io/badge/Marketplace-Custom%20Card-41BDF5.svg)](https://www.home-assistant.io/integrations/marketplace/)
+<p align="center">
+  <a href="https://www.home-assistant.io/integrations/marketplace/"><img src="https://img.shields.io/badge/Marketplace-Custom-41BDF5.svg?style=flat-square" alt="Marketplace Custom"></a>
+  <a href="https://github.com/selvakk2k/atomberg-lock-card/releases/latest"><img src="https://img.shields.io/github/v/release/selvakk2k/atomberg-lock-card?label=Stable&style=flat-square" alt="Stable"></a>
+  <a href="https://github.com/selvakk2k/atomberg-lock-card/releases"><img src="https://img.shields.io/github/v/release/selvakk2k/atomberg-lock-card?include_prereleases&label=Beta&color=orange&style=flat-square" alt="Beta"></a>
+  <a href="https://github.com/selvakk2k"><img src="https://img.shields.io/badge/AI%20Assisted-Antigravity%20%7C%20Claude%20%7C%20CodeRabbit-blueviolet?style=flat-square" alt="AI-Assisted"></a>
+  <a href="https://aiattribution.github.io/interpret-attribution"><img src="https://img.shields.io/badge/AI%20Attribution-AIA%20PAI%20Nc%20Hin-orange?style=flat-square" alt="AI Attribution"></a>
+</p>
 
 A custom Lovelace card for Atomberg Smart Door Locks (SL1 / SL1 Pro) in Home Assistant. Designed with the [Appliance Lovelace Design System](https://github.com/selvakk2k/ha-atomberg-lock) for seamless Material 3 theming, tactile lock/unlock control, and real-time audit logs.
 
