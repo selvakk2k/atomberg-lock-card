@@ -87,8 +87,9 @@ check(
 
 console.log('');
 if (errors > 0) {
-  console.error(`💥 ${errors} design system check(s) failed.`);
+  console.error(`Audit failed with ${errors} design system error(s).`);
   process.exit(1);
 } else {
-  console.log('🎉 All Design System Compliance Checks Passed Cleanly!\n');
+  console.log('All Design System Compliance Checks Passed Cleanly!\n');
 }
+
