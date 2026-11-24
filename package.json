@@ -1,6 +1,6 @@
 {
   "name": "atomberg-lock-card",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A Lovelace card for Atomberg Smart Locks with local BLE control, battery monitoring, and activity audit logs",
   "type": "module",
   "main": "dist/atomberg-lock-card.js",
