@@ -1,5 +1,6 @@
 # Atomberg Smart Lock Card (`atomberg-lock-card`)
 
+<!-- ha-marketplace:exclude-start -->
 <p align="center">
   <a href="https://www.home-assistant.io/integrations/marketplace/"><img src="https://img.shields.io/badge/Marketplace-Custom-41BDF5.svg?style=flat-square" alt="Marketplace Custom"></a>
   <a href="https://github.com/selvakk2k/atomberg-lock-card/releases/latest"><img src="https://img.shields.io/github/v/release/selvakk2k/atomberg-lock-card?label=Stable&style=flat-square" alt="Stable"></a>
@@ -7,6 +8,7 @@
   <a href="https://github.com/selvakk2k"><img src="https://img.shields.io/badge/AI%20Assisted-Antigravity%20%7C%20Claude%20%7C%20CodeRabbit-blueviolet?style=flat-square" alt="AI-Assisted"></a>
   <a href="https://aiattribution.github.io/interpret-attribution"><img src="https://img.shields.io/badge/AI%20Attribution-AIA%20PAI%20Nc%20Hin-orange?style=flat-square" alt="AI Attribution"></a>
 </p>
+<!-- ha-marketplace:exclude-end -->
 
 A custom Lovelace card for Atomberg Smart Door Locks (SL1 / SL1 Pro) in Home Assistant. Designed with the [Appliance Lovelace Design System](https://github.com/selvakk2k/ha-atomberg-lock) for seamless Material 3 theming, tactile lock/unlock control, and real-time audit logs.
 
@@ -30,6 +32,7 @@ A custom Lovelace card for Atomberg Smart Door Locks (SL1 / SL1 Pro) in Home Ass
 
 ---
 
+<!-- ha-marketplace:exclude-start -->
 ## Installation
 
 ### Method 1: Via Home Assistant Marketplace (Recommended)
@@ -55,6 +58,7 @@ A custom Lovelace card for Atomberg Smart Door Locks (SL1 / SL1 Pro) in Home Ass
 4. Add the card to any dashboard view.
 
 ---
+<!-- ha-marketplace:exclude-end -->
 
 ## Card Configuration
 
@@ -100,6 +104,7 @@ last_event_sensor: sensor.atomberg_sl1_pro_last_event
 
 ---
 
+<!-- ha-marketplace:exclude-start -->
 ## My Integrations & Lovelace Cards
 
 | Integration / Card | Category | Description | Status |
@@ -116,6 +121,7 @@ last_event_sensor: sensor.atomberg_sl1_pro_last_event
 | [Tinxy Local Python](https://github.com/selvakk2k/ha-tinxylocal) | Integration | Pure-Python local control for Tinxy smart switches and modules | `Stable` |
 
 ---
+<!-- ha-marketplace:exclude-end -->
 
 ## Credits & License
 
